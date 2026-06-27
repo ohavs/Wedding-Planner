@@ -1,0 +1,22 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // קבצי השראה ומסמכים של חתונה - רק חברי החתונה
+    match /weddings/{weddingId}/{allPaths=**} {
+      function isMember() {
+        return request.auth != null
+          && request.auth.uid in firestore.get(
+               /databases/(default)/documents/weddings/$(weddingId)
+             ).data.memberIds;
+      }
+      allow read: if isMember();
+      // הגבלת גודל ל-10MB וסוגי קבצים נפוצים
+      allow write: if isMember()
+        && request.resource.size < 10 * 1024 * 1024
+        && (request.resource.contentType.matches('image/.*')
+            || request.resource.contentType.matches('application/pdf'));
+      allow delete: if isMember();
+    }
+  }
+}
