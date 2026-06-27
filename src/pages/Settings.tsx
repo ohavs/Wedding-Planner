@@ -14,6 +14,7 @@ import {
   Mail,
   CalendarHeart,
   ChevronLeft,
+  KeyRound,
 } from 'lucide-react'
 import { db } from '@/firebase/config'
 import { useAuth } from '@/context/AuthContext'
@@ -59,7 +60,9 @@ export default function Settings() {
   const [profiles, setProfiles] = useState<MemberProfile[]>([])
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviting, setInviting] = useState(false)
-  const [confirm, setConfirm] = useState<null | 'leave' | 'delete'>(null)
+  const [confirm, setConfirm] = useState<null | 'leave'>(null)
+  const [codeOpen, setCodeOpen] = useState(false)
+  const [delOpen, setDelOpen] = useState(false)
 
   const isOwner = role === 'owner'
 
@@ -270,13 +273,27 @@ export default function Settings() {
             </button>
           )}
           {isOwner && (
-            <button
-              onClick={() => setConfirm('delete')}
-              className="flex w-full items-center justify-center gap-2 rounded-3xl bg-coral-50 p-3.5 font-bold text-coral-600"
-            >
-              <Trash2 className="h-5 w-5" />
-              מחיקת החתונה לצמיתות
-            </button>
+            <>
+              <button
+                onClick={() => setCodeOpen(true)}
+                className="flex w-full items-center justify-between gap-2 rounded-3xl bg-white p-3.5 shadow-card"
+              >
+                <span className="flex items-center gap-2 font-bold text-ink">
+                  <KeyRound className="h-5 w-5 text-ink-soft" />
+                  קוד מחיקה
+                </span>
+                <span className="text-xs font-semibold text-ink-faint">
+                  {wedding.deleteCode ? 'מוגדר ✓' : 'לא הוגדר'}
+                </span>
+              </button>
+              <button
+                onClick={() => setDelOpen(true)}
+                className="flex w-full items-center justify-center gap-2 rounded-3xl bg-coral-50 p-3.5 font-bold text-coral-600"
+              >
+                <Trash2 className="h-5 w-5" />
+                מחיקת החתונה לצמיתות
+              </button>
+            </>
           )}
           <button
             onClick={() => signOut()}
@@ -314,20 +331,31 @@ export default function Settings() {
         confirmLabel="יציאה"
         danger
       />
-      <ConfirmDialog
-        open={confirm === 'delete'}
-        onClose={() => setConfirm(null)}
-        onConfirm={() =>
+      <SetDeleteCodeSheet
+        open={codeOpen}
+        current={wedding.deleteCode ?? ''}
+        onClose={() => setCodeOpen(false)}
+        onSave={async (code) => {
+          await updateWedding({ deleteCode: code })
+          setCodeOpen(false)
+          toast.success(code ? 'קוד המחיקה נשמר' : 'קוד המחיקה הוסר')
+        }}
+      />
+
+      <DeleteWeddingSheet
+        open={delOpen}
+        code={wedding.deleteCode ?? ''}
+        onClose={() => setDelOpen(false)}
+        onSetCode={() => {
+          setDelOpen(false)
+          setCodeOpen(true)
+        }}
+        onDelete={() =>
           deleteWedding().then(() => {
             toast('החתונה נמחקה')
             navigate('/')
           })
         }
-        emoji="🗑️"
-        title="למחוק את החתונה?"
-        description="כל המוזמנים, התקציב והנתונים יימחקו לצמיתות. לא ניתן לשחזר."
-        confirmLabel="מחיקה"
-        danger
       />
     </div>
   )
@@ -455,6 +483,143 @@ function EditWeddingSheet({
         <Button size="lg" fullWidth loading={saving} onClick={submit}>
           שמירת שינויים
         </Button>
+      </div>
+    </BottomSheet>
+  )
+}
+
+function SetDeleteCodeSheet({
+  open,
+  current,
+  onClose,
+  onSave,
+}: {
+  open: boolean
+  current: string
+  onClose: () => void
+  onSave: (code: string) => Promise<void>
+}) {
+  const [code, setCode] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (open) setCode(current)
+  }, [open, current])
+
+  const dirty = code !== current
+
+  const submit = async () => {
+    setSaving(true)
+    await onSave(code.trim())
+    setSaving(false)
+  }
+
+  return (
+    <BottomSheet open={open} onClose={onClose} dirty={dirty} title="קוד מחיקה">
+      <div className="space-y-4">
+        <div className="flex flex-col items-center text-center">
+          <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-3xl bg-cream-100 text-3xl">
+            🔐
+          </div>
+          <p className="text-sm text-ink-soft">
+            בחרו קוד שיידרש כדי למחוק את החתונה לצמיתות — כך מונעים מחיקה בטעות.
+          </p>
+        </div>
+        <Field label="קוד מחיקה" hint="השאירו ריק כדי לבטל את הדרישה לקוד">
+          <Input
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            placeholder="לדוגמה: שלנו2026"
+            autoComplete="off"
+          />
+        </Field>
+        <Button size="lg" fullWidth loading={saving} onClick={submit} icon={<KeyRound className="h-5 w-5" />}>
+          שמירת הקוד
+        </Button>
+      </div>
+    </BottomSheet>
+  )
+}
+
+function DeleteWeddingSheet({
+  open,
+  code,
+  onClose,
+  onSetCode,
+  onDelete,
+}: {
+  open: boolean
+  code: string
+  onClose: () => void
+  onSetCode: () => void
+  onDelete: () => Promise<void>
+}) {
+  const [val, setVal] = useState('')
+  const [busy, setBusy] = useState(false)
+  const hasCode = code.trim().length > 0
+
+  useEffect(() => {
+    if (open) setVal('')
+  }, [open])
+
+  const submit = async () => {
+    if (val.trim() !== code.trim()) {
+      toast.error('הקוד שגוי')
+      return
+    }
+    setBusy(true)
+    await onDelete()
+  }
+
+  return (
+    <BottomSheet open={open} onClose={onClose} title="מחיקת החתונה">
+      <div className="space-y-4">
+        <div className="flex flex-col items-center text-center">
+          <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-3xl bg-coral-100 text-3xl">
+            🗑️
+          </div>
+          <p className="text-sm text-ink-soft">
+            כל המוזמנים, התקציב, הספקים והנתונים יימחקו לצמיתות. לא ניתן לשחזר.
+          </p>
+        </div>
+
+        {hasCode ? (
+          <>
+            <Field label="הזינו את קוד המחיקה לאישור">
+              <Input
+                value={val}
+                onChange={(e) => setVal(e.target.value)}
+                placeholder="קוד מחיקה"
+                autoComplete="off"
+              />
+            </Field>
+            <Button
+              size="lg"
+              fullWidth
+              loading={busy}
+              onClick={submit}
+              className="bg-coral-500 active:bg-coral-600"
+              icon={<Trash2 className="h-5 w-5" />}
+            >
+              מחיקה לצמיתות
+            </Button>
+          </>
+        ) : (
+          <>
+            <div className="rounded-2xl bg-sun-50 p-3.5 text-center text-sm font-medium text-ink-soft">
+              כדי למחוק את החתונה צריך קודם להגדיר קוד מחיקה.
+            </div>
+            <Button
+              size="lg"
+              fullWidth
+              variant="secondary"
+              onClick={onSetCode}
+              icon={<KeyRound className="h-5 w-5" />}
+            >
+              הגדרת קוד מחיקה
+            </Button>
+          </>
+        )}
       </div>
     </BottomSheet>
   )

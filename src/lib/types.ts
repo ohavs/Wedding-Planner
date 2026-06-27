@@ -32,6 +32,8 @@ export interface Wedding {
   memberEmails: string[]
   /** הזמנות ממתינות לפי אימייל */
   pendingInvites: string[]
+  /** קוד אישור שיש להזין כדי למחוק את החתונה (הגנה מפני מחיקה בטעות) */
+  deleteCode?: string
   createdAt?: Timestamp
   updatedAt?: Timestamp
 }

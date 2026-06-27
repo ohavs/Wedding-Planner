@@ -95,7 +95,7 @@
 
   /* אזור בטוח לתחתית (מעל ה-bottom nav וכפתור ההוספה הצף) */
   .pb-nav {
-    padding-bottom: calc(9rem + var(--safe-bottom));
+    padding-bottom: calc(10.25rem + var(--safe-bottom));
   }
 
   .pt-safe {
