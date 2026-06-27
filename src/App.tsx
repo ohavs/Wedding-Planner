@@ -1,26 +1,28 @@
-import { lazy, Suspense } from 'react'
+import { Suspense } from 'react'
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { ThemeProvider } from './context/ThemeContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { WeddingProvider, useWedding } from './context/WeddingContext'
 import { AppShell } from './components/layout/AppShell'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { FullScreenLoader } from './components/ui/Spinner'
+import { lazyWithRetry } from './lib/lazyWithRetry'
 
 import Login from './pages/Login'
 import SetupRequired from './pages/SetupRequired'
 
-const Onboarding = lazy(() => import('./pages/Onboarding'))
-const Dashboard = lazy(() => import('./pages/Dashboard'))
-const Guests = lazy(() => import('./pages/Guests'))
-const Budget = lazy(() => import('./pages/Budget'))
-const Vendors = lazy(() => import('./pages/Vendors'))
-const Tasks = lazy(() => import('./pages/Tasks'))
-const Gifts = lazy(() => import('./pages/Gifts'))
-const DaySchedule = lazy(() => import('./pages/DaySchedule'))
-const Inspiration = lazy(() => import('./pages/Inspiration'))
-const More = lazy(() => import('./pages/More'))
-const Settings = lazy(() => import('./pages/Settings'))
+const Onboarding = lazyWithRetry(() => import('./pages/Onboarding'))
+const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'))
+const Guests = lazyWithRetry(() => import('./pages/Guests'))
+const Budget = lazyWithRetry(() => import('./pages/Budget'))
+const Vendors = lazyWithRetry(() => import('./pages/Vendors'))
+const Tasks = lazyWithRetry(() => import('./pages/Tasks'))
+const Gifts = lazyWithRetry(() => import('./pages/Gifts'))
+const DaySchedule = lazyWithRetry(() => import('./pages/DaySchedule'))
+const Inspiration = lazyWithRetry(() => import('./pages/Inspiration'))
+const More = lazyWithRetry(() => import('./pages/More'))
+const Settings = lazyWithRetry(() => import('./pages/Settings'))
 
 function RequireWedding() {
   const { weddings, loading } = useWedding()
@@ -38,7 +40,8 @@ function Gate() {
 
   return (
     <WeddingProvider>
-      <Suspense fallback={<FullScreenLoader />}>
+      <ErrorBoundary>
+        <Suspense fallback={<FullScreenLoader />}>
         <Routes>
           <Route path="/onboarding" element={<Onboarding />} />
           <Route element={<RequireWedding />}>
@@ -57,7 +60,8 @@ function Gate() {
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </Suspense>
+        </Suspense>
+      </ErrorBoundary>
     </WeddingProvider>
   )
 }
