@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import toast from 'react-hot-toast'
-import { Search, Phone, Trash2, Users } from 'lucide-react'
+import { Search, Phone, Users } from 'lucide-react'
 import { useWeddingCollection } from '@/hooks/useWeddingCollection'
 import type { Guest, GuestSide, RsvpStatus } from '@/lib/types'
 import { GUEST_GROUPS, GUEST_SIDES, RSVP_STATUS } from '@/lib/constants'
@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/Input'
 import { Field } from '@/components/ui/Field'
 import { Select } from '@/components/ui/Select'
 import { Stepper } from '@/components/ui/Stepper'
+import { DeleteButton } from '@/components/ui/DeleteButton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { cn } from '@/lib/utils'
 import { staggerContainer, slideItem, tapScale } from '@/lib/motion'
@@ -154,7 +155,7 @@ export default function Guests() {
         )}
       </div>
 
-      <Fab onClick={() => setEditing({})} label="מוזמן" />
+      <Fab onClick={() => setEditing({})} aria-label="מוזמן חדש" />
 
       <GuestSheet
         editing={editing}
@@ -201,19 +202,33 @@ function GuestSheet({
   const [rsvp, setRsvp] = useState<RsvpStatus>('pending')
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
+  const baseline = useRef('')
 
   // איפוס בעת פתיחה
   useEffect(() => {
     if (editing) {
-      setName(editing.name ?? '')
-      setPhone(editing.phone ?? '')
-      setSide(editing.side ?? 'shared')
-      setGroup(editing.group ?? 'משפחה')
-      setCount(editing.count ?? 1)
-      setRsvp(editing.rsvp ?? 'pending')
-      setNotes(editing.notes ?? '')
+      const init = {
+        name: editing.name ?? '',
+        phone: editing.phone ?? '',
+        side: editing.side ?? 'shared',
+        group: editing.group ?? 'משפחה',
+        count: editing.count ?? 1,
+        rsvp: editing.rsvp ?? 'pending',
+        notes: editing.notes ?? '',
+      }
+      setName(init.name)
+      setPhone(init.phone)
+      setSide(init.side)
+      setGroup(init.group)
+      setCount(init.count)
+      setRsvp(init.rsvp)
+      setNotes(init.notes)
+      baseline.current = JSON.stringify(init)
     }
   }, [editing])
+
+  const dirty =
+    JSON.stringify({ name, phone, side, group, count, rsvp, notes }) !== baseline.current
 
   const submit = async () => {
     if (!name.trim()) {
@@ -229,7 +244,7 @@ function GuestSheet({
   }
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={isEdit ? 'עריכת מוזמן' : 'מוזמן חדש'}>
+    <BottomSheet open={open} onClose={onClose} dirty={dirty} title={isEdit ? 'עריכת מוזמן' : 'מוזמן חדש'}>
       <div className="space-y-4">
         <Field label="שם מלא">
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="לדוגמה: דוד כהן" />
@@ -278,11 +293,7 @@ function GuestSheet({
         </Field>
 
         <div className="flex gap-3 pt-1">
-          {isEdit && (
-            <Button variant="danger" size="lg" onClick={() => onDelete(editing!.id!)} icon={<Trash2 className="h-5 w-5" />}>
-              מחיקה
-            </Button>
-          )}
+          {isEdit && <DeleteButton onConfirm={() => onDelete(editing!.id!)} itemName={name} />}
           <Button size="lg" fullWidth loading={saving} onClick={submit} icon={<Users className="h-5 w-5" />}>
             {isEdit ? 'שמירה' : 'הוספה'}
           </Button>

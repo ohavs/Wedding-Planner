@@ -6,6 +6,32 @@
   :root {
     --safe-bottom: env(safe-area-inset-bottom, 0px);
     --safe-top: env(safe-area-inset-top, 0px);
+
+    /* פלטה בהירה */
+    --c-bg: 253 246 236;
+    --c-surface: 255 255 255;
+    --c-surface-2: 255 252 247;
+    --c-surface-3: 253 246 236;
+    --c-muted: 248 236 217;
+    --c-ink: 42 38 32;
+    --c-ink-soft: 94 87 76;
+    --c-ink-faint: 154 145 132;
+
+    color-scheme: light;
+  }
+
+  .dark {
+    /* פלטה כהה חמימה */
+    --c-bg: 23 19 15;
+    --c-surface: 38 31 25;
+    --c-surface-2: 46 38 29;
+    --c-surface-3: 54 45 35;
+    --c-muted: 64 54 43;
+    --c-ink: 244 237 226;
+    --c-ink-soft: 198 187 171;
+    --c-ink-faint: 142 133 120;
+
+    color-scheme: dark;
   }
 
   * {
@@ -21,6 +47,7 @@
     @apply bg-cream text-ink font-sans antialiased;
     overscroll-behavior-y: none;
     text-rendering: optimizeLegibility;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   /* מבטל זום אוטומטי ב-iOS על שדות קלט (גודל מינימלי 16px) */
@@ -43,11 +70,7 @@
     appearance: textfield;
   }
 
-  /* בוררי תאריך/שעה במצב בהיר תואם לעיצוב */
-  input[type='date'],
-  input[type='time'] {
-    color-scheme: light;
-  }
+  /* בורר התאריך/שעה יורש את ערכת הצבעים (בהיר/כהה) */
   input[type='date']::-webkit-calendar-picker-indicator,
   input[type='time']::-webkit-calendar-picker-indicator {
     opacity: 0;
@@ -67,12 +90,12 @@
 @layer components {
   /* כרטיס בסיסי בסגנון העיצוב */
   .surface {
-    @apply rounded-3xl bg-white shadow-card;
+    @apply rounded-3xl bg-surface shadow-card;
   }
 
-  /* אזור בטוח לתחתית (מעל ה-bottom nav) */
+  /* אזור בטוח לתחתית (מעל ה-bottom nav וכפתור ההוספה הצף) */
   .pb-nav {
-    padding-bottom: calc(5.5rem + var(--safe-bottom));
+    padding-bottom: calc(9rem + var(--safe-bottom));
   }
 
   .pt-safe {
@@ -81,7 +104,8 @@
 
   /* טשטוש כפתור פעולה */
   .glass {
-    @apply bg-white/70 backdrop-blur-xl;
+    background-color: rgb(var(--c-surface) / 0.72);
+    @apply backdrop-blur-xl;
   }
 
   /* טקסט גרדיאנט */
@@ -103,4 +127,52 @@
   .hide-scrollbar::-webkit-scrollbar {
     display: none;
   }
+}
+
+/* ===== התאמות מצב כהה לאלמנטים שאינם נייטרליים ===== */
+/* משטחים לבנים מלאים → משטח כהה */
+.dark .bg-white {
+  background-color: rgb(var(--c-surface));
+}
+
+/* רקעי גוון עדינים (chips, אייקונים) → גרסה כהה ורכה */
+.dark .bg-teal-50 {
+  background-color: rgb(45 128 136 / 0.16);
+}
+.dark .bg-teal-100 {
+  background-color: rgb(45 128 136 / 0.26);
+}
+.dark .bg-sun-50 {
+  background-color: rgb(245 169 60 / 0.14);
+}
+.dark .bg-sun-100 {
+  background-color: rgb(245 169 60 / 0.22);
+}
+.dark .bg-coral-50 {
+  background-color: rgb(236 106 106 / 0.14);
+}
+.dark .bg-coral-100 {
+  background-color: rgb(236 106 106 / 0.22);
+}
+.dark .bg-blush-100 {
+  background-color: rgb(240 175 183 / 0.16);
+}
+.dark .bg-sky-100 {
+  background-color: rgb(45 128 136 / 0.22);
+}
+
+/* טקסטים בגוון מותג → גרסה בהירה יותר לקריאות על כהה */
+.dark .text-teal-500 {
+  color: rgb(87 160 166);
+}
+.dark .text-teal-600,
+.dark .text-teal-700 {
+  color: rgb(143 192 196);
+}
+.dark .text-coral-500,
+.dark .text-coral-600 {
+  color: rgb(238 124 131);
+}
+.dark .text-sun-600 {
+  color: rgb(248 190 85);
 }

@@ -10,11 +10,13 @@ import {
   Download,
   ChevronLeft,
   Plus,
+  Palette,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useWedding } from '@/context/WeddingContext'
 import { usePWAInstall } from '@/hooks/usePWAInstall'
 import { Avatar } from '@/components/ui/Avatar'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 
 const links = [
@@ -82,6 +84,21 @@ export default function More() {
             </motion.button>
           )
         })}
+      </motion.div>
+
+      {/* מצב תצוגה */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mt-4 rounded-3xl bg-white p-3.5 shadow-card"
+      >
+        <div className="mb-2.5 flex items-center gap-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-cream-100 text-ink-soft">
+            <Palette className="h-5 w-5" />
+          </span>
+          <span className="flex-1 font-bold text-ink">מצב תצוגה</span>
+        </div>
+        <ThemeToggle />
       </motion.div>
 
       {/* ניהול */}

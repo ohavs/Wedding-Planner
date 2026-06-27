@@ -16,7 +16,7 @@ export function BottomNav() {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 flex justify-center pb-[var(--safe-bottom)]">
-      <div className="mx-3 mb-3 flex w-full max-w-lg items-stretch justify-around rounded-3xl border border-white/60 bg-white/85 px-2 py-2 shadow-float backdrop-blur-xl">
+      <div className="mx-3 mb-3 flex w-full max-w-lg items-stretch justify-around rounded-3xl border border-cream-200/70 bg-surface/85 px-2 py-2 shadow-float backdrop-blur-xl">
         {items.map((item) => {
           const Icon = item.icon
           const active = item.end

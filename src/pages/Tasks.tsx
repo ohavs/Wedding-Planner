@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { orderBy } from 'firebase/firestore'
-import { Check, Trash2, ListChecks, CalendarDays } from 'lucide-react'
+import { Check, ListChecks, CalendarDays } from 'lucide-react'
 import { useWeddingCollection } from '@/hooks/useWeddingCollection'
 import type { ChecklistTask, TaskTiming } from '@/lib/types'
 import { TASK_TIMINGS } from '@/lib/constants'
@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/Input'
 import { DateField } from '@/components/ui/DateField'
 import { Field } from '@/components/ui/Field'
 import { Select } from '@/components/ui/Select'
+import { DeleteButton } from '@/components/ui/DeleteButton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { cn, formatDateShort, pct } from '@/lib/utils'
 import { staggerContainer, slideItem, tapScale } from '@/lib/motion'
@@ -149,7 +150,7 @@ export default function Tasks() {
         )}
       </div>
 
-      <Fab onClick={() => setEditing({})} label="משימה" />
+      <Fab onClick={() => setEditing({})} aria-label="משימה חדשה" />
 
       <TaskSheet
         editing={editing}
@@ -195,15 +196,25 @@ function TaskSheet({
   const [dueDate, setDueDate] = useState('')
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
+  const baseline = useRef('')
 
   useEffect(() => {
     if (editing) {
-      setTitle(editing.title ?? '')
-      setTiming(editing.timing ?? '3m')
-      setDueDate(editing.dueDate ?? '')
-      setNotes(editing.notes ?? '')
+      const init = {
+        title: editing.title ?? '',
+        timing: editing.timing ?? '3m',
+        dueDate: editing.dueDate ?? '',
+        notes: editing.notes ?? '',
+      }
+      setTitle(init.title)
+      setTiming(init.timing)
+      setDueDate(init.dueDate)
+      setNotes(init.notes)
+      baseline.current = JSON.stringify(init)
     }
   }, [editing])
+
+  const dirty = JSON.stringify({ title, timing, dueDate, notes }) !== baseline.current
 
   const submit = async () => {
     if (!title.trim()) {
@@ -226,7 +237,7 @@ function TaskSheet({
   }
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={isEdit ? 'עריכת משימה' : 'משימה חדשה'}>
+    <BottomSheet open={open} onClose={onClose} dirty={dirty} title={isEdit ? 'עריכת משימה' : 'משימה חדשה'}>
       <div className="space-y-4">
         <Field label="המשימה">
           <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="לדוגמה: לסגור צלם" />
@@ -246,11 +257,7 @@ function TaskSheet({
           <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="פרטים נוספים" />
         </Field>
         <div className="flex gap-3 pt-1">
-          {isEdit && (
-            <Button variant="danger" size="lg" onClick={() => onDelete(editing!.id!)} icon={<Trash2 className="h-5 w-5" />}>
-              מחיקה
-            </Button>
-          )}
+          {isEdit && <DeleteButton onConfirm={() => onDelete(editing!.id!)} itemName={title} />}
           <Button size="lg" fullWidth loading={saving} onClick={submit} icon={<ListChecks className="h-5 w-5" />}>
             {isEdit ? 'שמירה' : 'הוספה'}
           </Button>

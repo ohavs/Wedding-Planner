@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import toast from 'react-hot-toast'
-import { Phone, Trash2, Briefcase } from 'lucide-react'
+import { Phone, Briefcase } from 'lucide-react'
 import { useWeddingCollection } from '@/hooks/useWeddingCollection'
 import type { Vendor, VendorStatus } from '@/lib/types'
 import { VENDOR_CATEGORIES, VENDOR_STATUS, vendorCategory } from '@/lib/constants'
@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Field } from '@/components/ui/Field'
 import { Select } from '@/components/ui/Select'
+import { DeleteButton } from '@/components/ui/DeleteButton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { cn, formatCurrency } from '@/lib/utils'
 import { staggerContainer, slideItem, tapScale } from '@/lib/motion'
@@ -133,7 +134,7 @@ export default function Vendors() {
         )}
       </div>
 
-      <Fab onClick={() => setEditing({})} label="ספק" />
+      <Fab onClick={() => setEditing({})} aria-label="ספק חדש" />
 
       <VendorSheet
         editing={editing}
@@ -179,18 +180,32 @@ function VendorSheet({
   const [status, setStatus] = useState<VendorStatus>('lead')
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
+  const baseline = useRef('')
 
   useEffect(() => {
     if (editing) {
-      setName(editing.name ?? '')
-      setCategory(editing.category ?? 'venue')
-      setPhone(editing.phone ?? '')
-      setPrice(editing.price ? String(editing.price) : '')
-      setPaid(editing.paid ? String(editing.paid) : '')
-      setStatus(editing.status ?? 'lead')
-      setNotes(editing.notes ?? '')
+      const init = {
+        name: editing.name ?? '',
+        category: editing.category ?? 'venue',
+        phone: editing.phone ?? '',
+        price: editing.price ? String(editing.price) : '',
+        paid: editing.paid ? String(editing.paid) : '',
+        status: editing.status ?? 'lead',
+        notes: editing.notes ?? '',
+      }
+      setName(init.name)
+      setCategory(init.category)
+      setPhone(init.phone)
+      setPrice(init.price)
+      setPaid(init.paid)
+      setStatus(init.status)
+      setNotes(init.notes)
+      baseline.current = JSON.stringify(init)
     }
   }, [editing])
+
+  const dirty =
+    JSON.stringify({ name, category, phone, price, paid, status, notes }) !== baseline.current
 
   const submit = async () => {
     if (!name.trim()) {
@@ -214,7 +229,7 @@ function VendorSheet({
   }
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={isEdit ? 'עריכת ספק' : 'ספק חדש'}>
+    <BottomSheet open={open} onClose={onClose} dirty={dirty} title={isEdit ? 'עריכת ספק' : 'ספק חדש'}>
       <div className="space-y-4">
         <Field label="קטגוריה">
           <Select value={category} onChange={setCategory} options={catOptions} title="בחרו קטגוריה" />
@@ -261,11 +276,7 @@ function VendorSheet({
           <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="מה סגרתם, מה כולל..." />
         </Field>
         <div className="flex gap-3 pt-1">
-          {isEdit && (
-            <Button variant="danger" size="lg" onClick={() => onDelete(editing!.id!)} icon={<Trash2 className="h-5 w-5" />}>
-              מחיקה
-            </Button>
-          )}
+          {isEdit && <DeleteButton onConfirm={() => onDelete(editing!.id!)} itemName={name} />}
           <Button size="lg" fullWidth loading={saving} onClick={submit} icon={<Briefcase className="h-5 w-5" />}>
             {isEdit ? 'שמירה' : 'הוספה'}
           </Button>

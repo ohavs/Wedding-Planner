@@ -1,6 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  darkMode: 'class',
   theme: {
     extend: {
       fontFamily: {
@@ -8,13 +9,15 @@ export default {
         display: ['Fredoka', 'Rubik', 'sans-serif'],
       },
       colors: {
-        // רקעים חמימים בהשראת העיצוב
+        // רקעים נייטרליים מבוססי CSS variables (מתחלפים במצב כהה)
         cream: {
-          DEFAULT: '#FDF6EC',
-          50: '#FFFCF7',
-          100: '#FDF6EC',
-          200: '#F8ECD9',
+          DEFAULT: 'rgb(var(--c-bg) / <alpha-value>)',
+          50: 'rgb(var(--c-surface-2) / <alpha-value>)',
+          100: 'rgb(var(--c-surface-3) / <alpha-value>)',
+          200: 'rgb(var(--c-muted) / <alpha-value>)',
         },
+        // משטח כרטיסים (לבן במצב בהיר, כהה במצב כהה)
+        surface: 'rgb(var(--c-surface) / <alpha-value>)',
         sand: '#F3E7D3',
         // צבע המותג הראשי - טורקיז/ירוק כהה (הכפתורים בעיצוב)
         teal: {
@@ -69,9 +72,9 @@ export default {
           DEFAULT: '#BFE3E8',
         },
         ink: {
-          DEFAULT: '#2A2620',
-          soft: '#5E574C',
-          faint: '#9A9184',
+          DEFAULT: 'rgb(var(--c-ink) / <alpha-value>)',
+          soft: 'rgb(var(--c-ink-soft) / <alpha-value>)',
+          faint: 'rgb(var(--c-ink-faint) / <alpha-value>)',
         },
       },
       borderRadius: {

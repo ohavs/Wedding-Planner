@@ -4,28 +4,28 @@ import { cn } from '@/lib/utils'
 
 interface FabProps {
   onClick: () => void
-  label?: string
   icon?: React.ReactNode
   className?: string
+  'aria-label'?: string
 }
 
-/** כפתור פעולה צף (מעל ה-bottom nav) */
-export function Fab({ onClick, label, icon, className }: FabProps) {
+/** כפתור פעולה צף עגול (צד ימin, מעל ה-bottom nav) */
+export function Fab({ onClick, icon, className, ...props }: FabProps) {
   return (
     <motion.button
       onClick={onClick}
       initial={{ scale: 0, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
       transition={{ type: 'spring', stiffness: 400, damping: 22, delay: 0.15 }}
-      whileTap={{ scale: 0.92 }}
+      whileTap={{ scale: 0.9 }}
+      aria-label={props['aria-label'] ?? 'הוספה'}
       className={cn(
-        'fixed z-30 flex items-center gap-2 rounded-3xl bg-teal-500 px-5 font-bold text-white shadow-float',
-        'bottom-[calc(5.75rem+var(--safe-bottom))] end-5 h-14',
+        'fixed z-30 flex h-14 w-14 items-center justify-center rounded-full bg-teal-500 text-white shadow-float',
+        'bottom-[calc(5.25rem+var(--safe-bottom))] start-5',
         className,
       )}
     >
-      {icon ?? <Plus className="h-6 w-6" strokeWidth={2.5} />}
-      {label && <span>{label}</span>}
+      {icon ?? <Plus className="h-7 w-7" strokeWidth={2.5} />}
     </motion.button>
   )
 }

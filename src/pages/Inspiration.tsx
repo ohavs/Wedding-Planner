@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Field } from '@/components/ui/Field'
 import { Select } from '@/components/ui/Select'
+import { AlertDialog } from '@/components/ui/AlertDialog'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { overlayVariants, popIn, staggerContainer } from '@/lib/motion'
 
@@ -33,6 +34,7 @@ export default function Inspiration() {
   const [filter, setFilter] = useState('all')
   const [uploadOpen, setUploadOpen] = useState(false)
   const [viewing, setViewing] = useState<InspirationItem | null>(null)
+  const [confirmDel, setConfirmDel] = useState<InspirationItem | null>(null)
 
   const segments = useMemo(
     () => [
@@ -118,7 +120,7 @@ export default function Inspiration() {
                     loading="lazy"
                     className="h-full w-full object-cover"
                   />
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/70 to-transparent p-3 pt-8">
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3 pt-8">
                     <p className="truncate text-start text-sm font-semibold text-white">{item.title}</p>
                   </div>
                 </motion.button>
@@ -128,7 +130,7 @@ export default function Inspiration() {
         )}
       </div>
 
-      <Fab onClick={() => setUploadOpen(true)} icon={<ImagePlus className="h-6 w-6" />} label="העלאה" />
+      <Fab onClick={() => setUploadOpen(true)} icon={<ImagePlus className="h-6 w-6" />} aria-label="העלאת קובץ" />
 
       <UploadSheet
         open={uploadOpen}
@@ -150,7 +152,7 @@ export default function Inspiration() {
               initial="initial"
               animate="animate"
               exit="exit"
-              className="fixed inset-0 z-[60] flex flex-col bg-ink/95 backdrop-blur-sm"
+              className="fixed inset-0 z-[60] flex flex-col bg-black/95 backdrop-blur-sm"
               onClick={() => setViewing(null)}
             >
               <div className="flex items-center justify-between p-4 pt-safe">
@@ -163,7 +165,7 @@ export default function Inspiration() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
-                    handleDelete(viewing)
+                    setConfirmDel(viewing)
                   }}
                   className="flex h-11 w-11 items-center justify-center rounded-2xl bg-coral-500/90 text-white"
                 >
@@ -187,6 +189,17 @@ export default function Inspiration() {
         </AnimatePresence>,
         document.body,
       )}
+
+      <AlertDialog
+        open={confirmDel !== null}
+        onClose={() => setConfirmDel(null)}
+        onConfirm={() => confirmDel && handleDelete(confirmDel)}
+        emoji="🗑️"
+        title="למחוק את הקובץ?"
+        description={`"${confirmDel?.title ?? ''}" יימחק לצמיתות מהענן. לא ניתן לשחזר.`}
+        confirmLabel="מחיקה"
+        danger
+      />
     </div>
   )
 }
@@ -258,7 +271,7 @@ function UploadSheet({
   }
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="העלאת השראה">
+    <BottomSheet open={open} onClose={onClose} dirty={Boolean(file)} title="העלאת השראה">
       <div className="space-y-4">
         <input
           ref={inputRef}

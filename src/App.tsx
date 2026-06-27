@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
+import { ThemeProvider } from './context/ThemeContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { WeddingProvider, useWedding } from './context/WeddingContext'
 import { AppShell } from './components/layout/AppShell'
@@ -63,26 +64,28 @@ function Gate() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Gate />
-      <Toaster
-        position="top-center"
-        toastOptions={{
-          duration: 2600,
-          style: {
-            background: '#ffffff',
-            color: '#2A2620',
-            borderRadius: '1rem',
-            boxShadow: '0 10px 30px -12px rgba(42,38,32,0.25)',
-            fontWeight: 600,
-            fontSize: '14px',
-            direction: 'rtl',
-            fontFamily: 'Rubik, sans-serif',
-          },
-          success: { iconTheme: { primary: '#15616D', secondary: '#fff' } },
-          error: { iconTheme: { primary: '#EC6A6A', secondary: '#fff' } },
-        }}
-      />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <Gate />
+        <Toaster
+          position="top-center"
+          toastOptions={{
+            duration: 2600,
+            style: {
+              background: 'rgb(var(--c-surface))',
+              color: 'rgb(var(--c-ink))',
+              borderRadius: '1rem',
+              boxShadow: '0 10px 30px -12px rgba(0,0,0,0.35)',
+              fontWeight: 600,
+              fontSize: '14px',
+              direction: 'rtl',
+              fontFamily: 'Rubik, sans-serif',
+            },
+            success: { iconTheme: { primary: '#2D8088', secondary: '#fff' } },
+            error: { iconTheme: { primary: '#EC6A6A', secondary: '#fff' } },
+          }}
+        />
+      </AuthProvider>
+    </ThemeProvider>
   )
 }

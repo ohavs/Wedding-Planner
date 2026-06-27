@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import toast from 'react-hot-toast'
-import { Pencil, Trash2, Wallet } from 'lucide-react'
+import { Pencil, Wallet } from 'lucide-react'
 import { useWedding } from '@/context/WeddingContext'
 import { useWeddingCollection } from '@/hooks/useWeddingCollection'
 import type { BudgetItem, Vendor } from '@/lib/types'
@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Field } from '@/components/ui/Field'
 import { IconButton } from '@/components/ui/IconButton'
+import { DeleteButton } from '@/components/ui/DeleteButton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { formatCurrency, pct } from '@/lib/utils'
 import { staggerContainer, slideItem } from '@/lib/motion'
@@ -141,7 +142,7 @@ export default function Budget() {
         </div>
       </div>
 
-      <Fab onClick={() => setEditing({})} label="סעיף" />
+      <Fab onClick={() => setEditing({})} aria-label="סעיף חדש" />
 
       {/* עריכת סכום כולל */}
       <EditTotalSheet
@@ -194,8 +195,9 @@ function EditTotalSheet({
   useEffect(() => {
     if (open) setVal(String(current || ''))
   }, [open, current])
+  const dirty = val !== String(current || '')
   return (
-    <BottomSheet open={open} onClose={onClose} title="עדכון תקציב כולל">
+    <BottomSheet open={open} onClose={onClose} dirty={dirty} title="עדכון תקציב כולל">
       <div className="space-y-4">
         <Field label="סכום (₪)">
           <Input
@@ -232,15 +234,25 @@ function BudgetItemSheet({
   const [estimated, setEstimated] = useState('')
   const [paid, setPaid] = useState('')
   const [saving, setSaving] = useState(false)
+  const baseline = useRef('')
 
   useEffect(() => {
     if (editing) {
-      setTitle(editing.title ?? '')
-      setCategory(editing.category ?? '')
-      setEstimated(editing.estimated ? String(editing.estimated) : '')
-      setPaid(editing.paid ? String(editing.paid) : '')
+      const init = {
+        title: editing.title ?? '',
+        category: editing.category ?? '',
+        estimated: editing.estimated ? String(editing.estimated) : '',
+        paid: editing.paid ? String(editing.paid) : '',
+      }
+      setTitle(init.title)
+      setCategory(init.category)
+      setEstimated(init.estimated)
+      setPaid(init.paid)
+      baseline.current = JSON.stringify(init)
     }
   }, [editing])
+
+  const dirty = JSON.stringify({ title, category, estimated, paid }) !== baseline.current
 
   const submit = async () => {
     if (!title.trim()) {
@@ -262,7 +274,7 @@ function BudgetItemSheet({
   }
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={isEdit ? 'עריכת סעיף' : 'סעיף חדש'}>
+    <BottomSheet open={open} onClose={onClose} dirty={dirty} title={isEdit ? 'עריכת סעיף' : 'סעיף חדש'}>
       <div className="space-y-4">
         <Field label="שם הסעיף">
           <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="טבעות / ירח דבש" />
@@ -291,11 +303,7 @@ function BudgetItemSheet({
           </Field>
         </div>
         <div className="flex gap-3 pt-1">
-          {isEdit && (
-            <Button variant="danger" size="lg" onClick={() => onDelete(editing!.id!)} icon={<Trash2 className="h-5 w-5" />}>
-              מחיקה
-            </Button>
-          )}
+          {isEdit && <DeleteButton onConfirm={() => onDelete(editing!.id!)} itemName={title} />}
           <Button size="lg" fullWidth loading={saving} onClick={submit} icon={<Wallet className="h-5 w-5" />}>
             {isEdit ? 'שמירה' : 'הוספה'}
           </Button>

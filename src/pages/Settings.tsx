@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
@@ -380,18 +380,33 @@ function EditWeddingSheet({
   const [guestTarget, setGuestTarget] = useState('')
   const [budgetTotal, setBudgetTotal] = useState('')
   const [saving, setSaving] = useState(false)
+  const baseline = useRef('')
 
   useEffect(() => {
     if (open) {
-      setPartner1(initial.partner1)
-      setPartner2(initial.partner2)
-      setDate(initial.date ?? '')
-      setVenue(initial.venue)
-      setCity(initial.city)
-      setGuestTarget(initial.guestTarget ? String(initial.guestTarget) : '')
-      setBudgetTotal(initial.budgetTotal ? String(initial.budgetTotal) : '')
+      const init = {
+        partner1: initial.partner1,
+        partner2: initial.partner2,
+        date: initial.date ?? '',
+        venue: initial.venue,
+        city: initial.city,
+        guestTarget: initial.guestTarget ? String(initial.guestTarget) : '',
+        budgetTotal: initial.budgetTotal ? String(initial.budgetTotal) : '',
+      }
+      setPartner1(init.partner1)
+      setPartner2(init.partner2)
+      setDate(init.date)
+      setVenue(init.venue)
+      setCity(init.city)
+      setGuestTarget(init.guestTarget)
+      setBudgetTotal(init.budgetTotal)
+      baseline.current = JSON.stringify(init)
     }
   }, [open, initial])
+
+  const dirty =
+    JSON.stringify({ partner1, partner2, date, venue, city, guestTarget, budgetTotal }) !==
+    baseline.current
 
   const submit = async () => {
     setSaving(true)
@@ -408,7 +423,7 @@ function EditWeddingSheet({
   }
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="עריכת פרטי החתונה">
+    <BottomSheet open={open} onClose={onClose} dirty={dirty} title="עריכת פרטי החתונה">
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <Field label="בן/בת זוג 1">

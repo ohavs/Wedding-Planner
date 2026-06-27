@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { orderBy } from 'firebase/firestore'
-import { Trash2, Clock, MapPin, User } from 'lucide-react'
+import { Clock, MapPin, User } from 'lucide-react'
 import { useWeddingCollection } from '@/hooks/useWeddingCollection'
 import type { ScheduleEvent } from '@/lib/types'
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -11,6 +11,7 @@ import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { TimeField } from '@/components/ui/DateField'
+import { DeleteButton } from '@/components/ui/DeleteButton'
 import { Field } from '@/components/ui/Field'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { staggerContainer, slideItem } from '@/lib/motion'
@@ -91,7 +92,7 @@ export default function DaySchedule() {
         )}
       </div>
 
-      <Fab onClick={() => setEditing({})} label="אירוע" />
+      <Fab onClick={() => setEditing({})} aria-label="אירוע חדש" />
 
       <ScheduleSheet
         editing={editing}
@@ -135,16 +136,28 @@ function ScheduleSheet({
   const [location, setLocation] = useState('')
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
+  const baseline = useRef('')
 
   useEffect(() => {
     if (editing) {
-      setTitle(editing.title ?? '')
-      setTime(editing.time ?? '')
-      setResponsible(editing.responsible ?? '')
-      setLocation(editing.location ?? '')
-      setNotes(editing.notes ?? '')
+      const init = {
+        title: editing.title ?? '',
+        time: editing.time ?? '',
+        responsible: editing.responsible ?? '',
+        location: editing.location ?? '',
+        notes: editing.notes ?? '',
+      }
+      setTitle(init.title)
+      setTime(init.time)
+      setResponsible(init.responsible)
+      setLocation(init.location)
+      setNotes(init.notes)
+      baseline.current = JSON.stringify(init)
     }
   }, [editing])
+
+  const dirty =
+    JSON.stringify({ title, time, responsible, location, notes }) !== baseline.current
 
   const submit = async () => {
     if (!title.trim()) {
@@ -166,7 +179,7 @@ function ScheduleSheet({
   }
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={isEdit ? 'עריכת אירוע' : 'אירוע חדש'}>
+    <BottomSheet open={open} onClose={onClose} dirty={dirty} title={isEdit ? 'עריכת אירוע' : 'אירוע חדש'}>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <Field label="שעה">
@@ -196,11 +209,7 @@ function ScheduleSheet({
           <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="פרטים נוספים" />
         </Field>
         <div className="flex gap-3 pt-1">
-          {isEdit && (
-            <Button variant="danger" size="lg" onClick={() => onDelete(editing!.id!)} icon={<Trash2 className="h-5 w-5" />}>
-              מחיקה
-            </Button>
-          )}
+          {isEdit && <DeleteButton onConfirm={() => onDelete(editing!.id!)} itemName={title} />}
           <Button size="lg" fullWidth loading={saving} onClick={submit} icon={<Clock className="h-5 w-5" />}>
             {isEdit ? 'שמירה' : 'הוספה'}
           </Button>
