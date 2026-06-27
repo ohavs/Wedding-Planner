@@ -2,7 +2,7 @@ import { forwardRef } from 'react'
 import { cn } from '@/lib/utils'
 
 const baseField =
-  'w-full rounded-2xl border border-cream-200 bg-cream-50 px-4 text-base text-ink placeholder:text-ink-faint outline-none transition-all focus:border-teal-300 focus:bg-white focus:ring-4 focus:ring-teal-50'
+  'w-full rounded-2xl border border-cream-200 bg-cream-50 px-4 text-base text-ink placeholder:text-ink-faint outline-none transition-all focus:border-teal-300 focus:bg-surface focus:ring-4 focus:ring-teal-500/15'
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   icon?: React.ReactNode

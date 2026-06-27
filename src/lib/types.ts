@@ -16,6 +16,9 @@ export interface Wedding {
   /** שמות בני הזוג */
   partner1: string
   partner2: string
+  /** קישור בני הזוג לחשבונות משתמש (אופציונלי) */
+  partner1Uid?: string
+  partner2Uid?: string
   /** תאריך האירוע (ISO string לשמירה פשוטה) */
   date: string | null
   venue: string

@@ -110,6 +110,28 @@ export default function Settings() {
     }
   }
 
+  // שיוך חבר כבן/בת הזוג (מתחתן 1 / מתחתן 2)
+  const assignPartner = async (p: MemberProfile, slot: 1 | 2) => {
+    if (slot === 1) {
+      if (wedding.partner1Uid === p.uid) await updateWedding({ partner1Uid: '' })
+      else
+        await updateWedding({
+          partner1Uid: p.uid,
+          partner1: p.displayName ?? wedding.partner1,
+          ...(wedding.partner2Uid === p.uid ? { partner2Uid: '' } : {}),
+        })
+    } else {
+      if (wedding.partner2Uid === p.uid) await updateWedding({ partner2Uid: '' })
+      else
+        await updateWedding({
+          partner2Uid: p.uid,
+          partner2: p.displayName ?? wedding.partner2,
+          ...(wedding.partner1Uid === p.uid ? { partner1Uid: '' } : {}),
+        })
+    }
+    toast.success('עודכן')
+  }
+
   return (
     <div>
       <PageHeader title="ניהול החתונה" subtitle="פרטים, שיתוף והגדרות" />
@@ -183,31 +205,63 @@ export default function Settings() {
                 <motion.div
                   key={p.uid}
                   variants={fadeUp}
-                  className="flex items-center gap-3 rounded-2xl bg-white p-3 shadow-soft"
+                  className="flex flex-col gap-2.5 rounded-2xl bg-white p-3 shadow-soft"
                 >
-                  <Avatar src={p.photoURL} name={p.displayName} size={42} />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold text-ink">
-                      {p.displayName ?? p.email}
-                      {p.uid === user?.uid && ' (אני)'}
-                    </p>
-                    <p className="truncate text-xs text-ink-soft">{p.email}</p>
+                  <div className="flex items-center gap-3">
+                    <Avatar src={p.photoURL} name={p.displayName} size={42} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold text-ink">
+                        {p.displayName ?? p.email}
+                        {p.uid === user?.uid && ' (אני)'}
+                      </p>
+                      <p className="truncate text-xs text-ink-soft">{p.email}</p>
+                    </div>
+                    {memberRole === 'owner' ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-sun-100 px-2.5 py-1 text-xs font-bold text-sun-600">
+                        <Crown className="h-3.5 w-3.5" /> בעלים
+                      </span>
+                    ) : isOwner ? (
+                      <button
+                        onClick={() => removeMember(p.uid, p.email ?? '').then(() => toast('הוסר'))}
+                        className="flex h-9 w-9 items-center justify-center rounded-xl bg-coral-50 text-coral-500"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    ) : (
+                      <span className="rounded-full bg-cream-100 px-2.5 py-1 text-xs font-semibold text-ink-soft">
+                        עורך
+                      </span>
+                    )}
                   </div>
-                  {memberRole === 'owner' ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-sun-100 px-2.5 py-1 text-xs font-bold text-sun-600">
-                      <Crown className="h-3.5 w-3.5" /> בעלים
-                    </span>
-                  ) : isOwner ? (
-                    <button
-                      onClick={() => removeMember(p.uid, p.email ?? '').then(() => toast('הוסר'))}
-                      className="flex h-9 w-9 items-center justify-center rounded-xl bg-coral-50 text-coral-500"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
+
+                  {/* שיוך כבן/בת הזוג */}
+                  {isOwner ? (
+                    <div className="flex gap-2">
+                      {([1, 2] as const).map((slot) => {
+                        const active =
+                          slot === 1
+                            ? wedding.partner1Uid === p.uid
+                            : wedding.partner2Uid === p.uid
+                        return (
+                          <button
+                            key={slot}
+                            onClick={() => assignPartner(p, slot)}
+                            className={cn(
+                              'flex-1 rounded-xl px-2 py-2 text-xs font-bold transition-colors',
+                              active ? 'bg-teal-500 text-white' : 'bg-cream-100 text-ink-soft',
+                            )}
+                          >
+                            💍 {slot === 1 ? 'מתחתן/ת 1' : 'מתחתן/ת 2'}
+                          </button>
+                        )
+                      })}
+                    </div>
                   ) : (
-                    <span className="rounded-full bg-cream-100 px-2.5 py-1 text-xs font-semibold text-ink-soft">
-                      עורך
-                    </span>
+                    (wedding.partner1Uid === p.uid || wedding.partner2Uid === p.uid) && (
+                      <span className="self-start rounded-full bg-blush-100 px-2.5 py-1 text-xs font-bold text-coral-600">
+                        💍 {wedding.partner1Uid === p.uid ? 'מתחתן/ת 1' : 'מתחתן/ת 2'}
+                      </span>
+                    )
                   )}
                 </motion.div>
               )
@@ -246,6 +300,7 @@ export default function Settings() {
                 icon={<Mail className="h-5 w-5" />}
                 type="email"
                 inputMode="email"
+                dir="auto"
                 placeholder="הזמנת שותף לפי אימייל"
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
