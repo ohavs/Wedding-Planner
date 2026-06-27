@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext'
 import { useWedding } from '@/context/WeddingContext'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { DateField } from '@/components/ui/DateField'
 import { Field } from '@/components/ui/Field'
 import { Card } from '@/components/ui/Card'
 import { staggerContainer, fadeUp } from '@/lib/motion'
@@ -126,7 +127,7 @@ export default function Onboarding() {
 
         <motion.div variants={fadeUp}>
           <Field label="תאריך החתונה" hint="אפשר לעדכן בהמשך">
-            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            <DateField value={date} onChange={setDate} />
           </Field>
         </motion.div>
 

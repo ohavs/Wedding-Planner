@@ -13,6 +13,7 @@ import { Fab } from '@/components/ui/Fab'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { DateField } from '@/components/ui/DateField'
 import { Field } from '@/components/ui/Field'
 import { Select } from '@/components/ui/Select'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -239,7 +240,7 @@ function TaskSheet({
           />
         </Field>
         <Field label="תאריך יעד (אופציונלי)">
-          <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          <DateField value={dueDate} onChange={setDueDate} placeholder="ללא תאריך" />
         </Field>
         <Field label="הערות">
           <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="פרטים נוספים" />

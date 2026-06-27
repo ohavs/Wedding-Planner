@@ -10,6 +10,7 @@ import { Fab } from '@/components/ui/Fab'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { TimeField } from '@/components/ui/DateField'
 import { Field } from '@/components/ui/Field'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { staggerContainer, slideItem } from '@/lib/motion'
@@ -169,7 +170,7 @@ function ScheduleSheet({
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <Field label="שעה">
-            <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+            <TimeField value={time} onChange={setTime} />
           </Field>
           <Field label="אירוע">
             <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="חופה" />

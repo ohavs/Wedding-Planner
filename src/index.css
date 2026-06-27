@@ -32,6 +32,27 @@
     font-family: inherit;
   }
 
+  /* הסתרת חצי הגדלה/הקטנה בשדות מספר */
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+
+  /* בוררי תאריך/שעה במצב בהיר תואם לעיצוב */
+  input[type='date'],
+  input[type='time'] {
+    color-scheme: light;
+  }
+  input[type='date']::-webkit-calendar-picker-indicator,
+  input[type='time']::-webkit-calendar-picker-indicator {
+    opacity: 0;
+  }
+
   h1, h2, h3, h4 {
     @apply font-display;
   }

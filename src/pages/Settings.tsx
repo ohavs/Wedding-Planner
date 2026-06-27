@@ -22,6 +22,7 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { DateField } from '@/components/ui/DateField'
 import { Field } from '@/components/ui/Field'
 import { Avatar } from '@/components/ui/Avatar'
 import { BottomSheet } from '@/components/ui/BottomSheet'
@@ -418,7 +419,7 @@ function EditWeddingSheet({
           </Field>
         </div>
         <Field label="תאריך החתונה">
-          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <DateField value={date} onChange={setDate} />
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="אולם / מקום">
