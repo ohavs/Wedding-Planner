@@ -251,7 +251,7 @@ export default function Settings() {
                               active ? 'bg-teal-500 text-white' : 'bg-cream-100 text-ink-soft',
                             )}
                           >
-                            💍 {slot === 1 ? 'מתחתן/ת 1' : 'מתחתן/ת 2'}
+                            {slot === 1 ? '🤵 בעל' : '👰 אישה'}
                           </button>
                         )
                       })}
@@ -259,7 +259,7 @@ export default function Settings() {
                   ) : (
                     (wedding.partner1Uid === p.uid || wedding.partner2Uid === p.uid) && (
                       <span className="self-start rounded-full bg-blush-100 px-2.5 py-1 text-xs font-bold text-coral-600">
-                        💍 {wedding.partner1Uid === p.uid ? 'מתחתן/ת 1' : 'מתחתן/ת 2'}
+                        {wedding.partner1Uid === p.uid ? '🤵 בעל' : '👰 אישה'}
                       </span>
                     )
                   )}
