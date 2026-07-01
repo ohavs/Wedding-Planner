@@ -55,10 +55,15 @@ export type WeddingFormData = Omit<
 
 export type RsvpStatus = 'pending' | 'yes' | 'no' | 'maybe'
 export type GuestSide = 'partner1' | 'partner2' | 'shared'
+export type GuestKind = 'single' | 'family'
 
 export interface Guest {
   id: string
   name: string
+  /** סוג: מוזמן יחיד או משפחה */
+  kind?: GuestKind
+  /** שמות בני המשפחה (כאשר kind === 'family') */
+  members?: string[]
   /** צד: של מי האורח */
   side: GuestSide
   /** קבוצה: משפחה, חברים, עבודה... */
