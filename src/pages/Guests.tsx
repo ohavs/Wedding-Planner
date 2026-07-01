@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import toast from 'react-hot-toast'
-import { Search, Phone, Users } from 'lucide-react'
+import { Search, Users } from 'lucide-react'
+import { useWedding } from '@/context/WeddingContext'
 import { useWeddingCollection } from '@/hooks/useWeddingCollection'
 import type { Guest, GuestSide, RsvpStatus } from '@/lib/types'
-import { GUEST_GROUPS, GUEST_SIDES, RSVP_STATUS } from '@/lib/constants'
+import { GUEST_GROUPS, RSVP_STATUS } from '@/lib/constants'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { StatTile } from '@/components/ui/StatTile'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
@@ -13,8 +14,7 @@ import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Field } from '@/components/ui/Field'
-import { Select } from '@/components/ui/Select'
-import { Stepper } from '@/components/ui/Stepper'
+import { Select, type SelectOption } from '@/components/ui/Select'
 import { DeleteButton } from '@/components/ui/DeleteButton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { cn } from '@/lib/utils'
@@ -22,25 +22,32 @@ import { staggerContainer, slideItem, tapScale } from '@/lib/motion'
 
 type Editing = Partial<Guest> | null
 
-const sideOptions = (Object.keys(GUEST_SIDES) as GuestSide[]).map((k) => ({
-  value: k,
-  label: GUEST_SIDES[k],
-}))
 const groupOptions = GUEST_GROUPS.map((g) => ({ value: g, label: g }))
 const rsvpCycle: RsvpStatus[] = ['pending', 'yes', 'maybe', 'no']
 
 export default function Guests() {
+  const { wedding } = useWedding()
   const { items, add, update, remove } = useWeddingCollection<Guest>('guests')
   const [filter, setFilter] = useState<string>('all')
   const [search, setSearch] = useState('')
   const [editing, setEditing] = useState<Editing>(null)
 
+  // אפשרויות הצד לפי שמות המתחתנים
+  const sideOptions: SelectOption[] = useMemo(
+    () => [
+      { value: 'partner1', label: `צד ${wedding?.partner1 || 'ראשון'}`, emoji: '🤵' },
+      { value: 'partner2', label: `צד ${wedding?.partner2 || 'שני'}`, emoji: '👰' },
+      { value: 'shared', label: 'משותף', emoji: '💞' },
+    ],
+    [wedding?.partner1, wedding?.partner2],
+  )
+  const sideLabel = (s: GuestSide) => sideOptions.find((o) => o.value === s)?.label ?? ''
+
   const stats = useMemo(() => {
     const invited = items.reduce((s, g) => s + (g.count || 1), 0)
     const confirmed = items.filter((g) => g.rsvp === 'yes').reduce((s, g) => s + (g.count || 1), 0)
-    const declined = items.filter((g) => g.rsvp === 'no').length
     const pending = items.filter((g) => g.rsvp === 'pending').length
-    return { invited, confirmed, declined, pending }
+    return { invited, confirmed, pending }
   }, [items])
 
   const segments = useMemo(
@@ -57,7 +64,7 @@ export default function Guests() {
   const filtered = useMemo(() => {
     return items
       .filter((g) => (filter === 'all' ? true : g.rsvp === filter))
-      .filter((g) => (search ? g.name.includes(search) || g.phone.includes(search) : true))
+      .filter((g) => (search ? g.name.includes(search) : true))
       .sort((a, b) => a.name.localeCompare(b.name, 'he'))
   }, [items, filter, search])
 
@@ -87,7 +94,7 @@ export default function Guests() {
         <div className="mt-4">
           <Input
             icon={<Search className="h-5 w-5" />}
-            placeholder="חיפוש לפי שם או טלפון"
+            placeholder="חיפוש לפי שם"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -133,7 +140,7 @@ export default function Guests() {
                       <span className="min-w-0">
                         <span className="block truncate font-bold text-ink">{g.name}</span>
                         <span className="block truncate text-xs text-ink-soft">
-                          {g.group || GUEST_SIDES[g.side]} · {g.count} מוזמנים
+                          {[g.group, sideLabel(g.side)].filter(Boolean).join(' · ')}
                         </span>
                       </span>
                     </button>
@@ -159,6 +166,7 @@ export default function Guests() {
 
       <GuestSheet
         editing={editing}
+        sideOptions={sideOptions}
         onClose={() => setEditing(null)}
         onSave={async (data, id) => {
           if (id) {
@@ -182,11 +190,13 @@ export default function Guests() {
 
 function GuestSheet({
   editing,
+  sideOptions,
   onClose,
   onSave,
   onDelete,
 }: {
   editing: Editing
+  sideOptions: SelectOption[]
   onClose: () => void
   onSave: (data: Partial<Guest>, id?: string) => Promise<void>
   onDelete: (id: string) => Promise<void>
@@ -195,12 +205,8 @@ function GuestSheet({
   const isEdit = Boolean(editing?.id)
 
   const [name, setName] = useState('')
-  const [phone, setPhone] = useState('')
   const [side, setSide] = useState<GuestSide>('shared')
   const [group, setGroup] = useState('משפחה')
-  const [count, setCount] = useState(1)
-  const [rsvp, setRsvp] = useState<RsvpStatus>('pending')
-  const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
   const baseline = useRef('')
 
@@ -209,26 +215,17 @@ function GuestSheet({
     if (editing) {
       const init = {
         name: editing.name ?? '',
-        phone: editing.phone ?? '',
         side: editing.side ?? 'shared',
         group: editing.group ?? 'משפחה',
-        count: editing.count ?? 1,
-        rsvp: editing.rsvp ?? 'pending',
-        notes: editing.notes ?? '',
       }
       setName(init.name)
-      setPhone(init.phone)
       setSide(init.side)
       setGroup(init.group)
-      setCount(init.count)
-      setRsvp(init.rsvp)
-      setNotes(init.notes)
       baseline.current = JSON.stringify(init)
     }
   }, [editing])
 
-  const dirty =
-    JSON.stringify({ name, phone, side, group, count, rsvp, notes }) !== baseline.current
+  const dirty = JSON.stringify({ name, side, group }) !== baseline.current
 
   const submit = async () => {
     if (!name.trim()) {
@@ -236,61 +233,42 @@ function GuestSheet({
       return
     }
     setSaving(true)
-    await onSave(
-      { name: name.trim(), phone: phone.trim(), side, group, count, rsvp, notes: notes.trim() },
-      editing?.id,
-    )
+    if (editing?.id) {
+      await onSave({ name: name.trim(), side, group }, editing.id)
+    } else {
+      // מוזמן חדש - ערכי ברירת מחדל לשדות שאינם בטופס
+      await onSave({
+        name: name.trim(),
+        side,
+        group,
+        count: 1,
+        phone: '',
+        rsvp: 'pending',
+        notes: '',
+      })
+    }
     setSaving(false)
   }
 
   return (
     <BottomSheet open={open} onClose={onClose} dirty={dirty} title={isEdit ? 'עריכת מוזמן' : 'מוזמן חדש'}>
       <div className="space-y-4">
-        <Field label="שם מלא">
+        <Field label="שם המוזמן">
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="לדוגמה: דוד כהן" />
         </Field>
-        <Field label="טלפון">
-          <Input
-            icon={<Phone className="h-5 w-5" />}
-            type="tel"
-            inputMode="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="050-0000000"
-          />
-        </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="צד">
-            <Select value={side} onChange={(v) => setSide(v as GuestSide)} options={sideOptions} title="בחרו צד" />
+          <Field label="קירבה">
+            <Select value={group} onChange={setGroup} options={groupOptions} title="בחרו קירבה" />
           </Field>
-          <Field label="קבוצה">
-            <Select value={group} onChange={setGroup} options={groupOptions} title="בחרו קבוצה" />
+          <Field label="צד">
+            <Select
+              value={side}
+              onChange={(v) => setSide(v as GuestSide)}
+              options={sideOptions}
+              title="בחרו צד"
+            />
           </Field>
         </div>
-        <Field label="כמות מוזמנים בהזמנה">
-          <Stepper value={count} onChange={setCount} min={1} max={20} />
-        </Field>
-        <Field label="סטטוס הגעה">
-          <div className="grid grid-cols-4 gap-2">
-            {(Object.keys(RSVP_STATUS) as RsvpStatus[]).map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setRsvp(s)}
-                className={cn(
-                  'flex flex-col items-center gap-1 rounded-2xl py-2.5 text-xs font-semibold transition-colors',
-                  rsvp === s ? 'bg-teal-500 text-white' : 'bg-cream-100 text-ink-soft',
-                )}
-              >
-                <span className="text-lg">{RSVP_STATUS[s].emoji}</span>
-                {RSVP_STATUS[s].label}
-              </button>
-            ))}
-          </div>
-        </Field>
-        <Field label="הערות">
-          <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="אלרגיות, הסעה..." />
-        </Field>
 
         <div className="flex gap-3 pt-1">
           {isEdit && <DeleteButton onConfirm={() => onDelete(editing!.id!)} itemName={name} />}
