@@ -104,18 +104,28 @@ export function exportGuestsWord(guests: Guest[], wedding: Wedding | null) {
   triggerDownload(blob, 'רשימת-מוזמנים.doc')
 }
 
-/** ייצוא ל-PDF (רינדור HTML לקאנבס - עברית תקינה) */
+/** ייצוא ל-PDF (רינדור בתוך iframe כדי ש-html2canvas יצלם נכון - עברית תקינה) */
 export async function exportGuestsPdf(guests: Guest[], wedding: Wedding | null) {
-  const container = document.createElement('div')
-  container.style.position = 'fixed'
-  container.style.top = '0'
-  container.style.left = '-10000px'
-  container.style.width = '760px'
-  container.style.background = '#ffffff'
-  container.innerHTML = buildTable(guests, wedding)
-  document.body.appendChild(container)
+  const iframe = document.createElement('iframe')
+  iframe.setAttribute('aria-hidden', 'true')
+  iframe.style.cssText =
+    'position:fixed;right:0;bottom:0;width:820px;height:10px;opacity:0;border:0;z-index:-1;pointer-events:none'
+  document.body.appendChild(iframe)
 
   try {
+    const doc = iframe.contentDocument
+    if (!doc) throw new Error('iframe document unavailable')
+    doc.open()
+    doc.write(
+      `<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8">` +
+        `<style>*{box-sizing:border-box;font-family:Arial,'Rubik',sans-serif}</style></head>` +
+        `<body style="margin:0;background:#ffffff">${buildTable(guests, wedding)}</body></html>`,
+    )
+    doc.close()
+
+    // המתנה לפריסה ולרינדור
+    await new Promise((r) => setTimeout(r, 350))
+
     const mod = await import('html2pdf.js')
     const html2pdf = mod.default ?? mod
     await html2pdf()
@@ -123,13 +133,13 @@ export async function exportGuestsPdf(guests: Guest[], wedding: Wedding | null) 
         margin: [10, 8, 12, 8],
         filename: 'רשימת-מוזמנים.pdf',
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, backgroundColor: '#ffffff', useCORS: true },
+        html2canvas: { scale: 2, backgroundColor: '#ffffff', windowWidth: 820, useCORS: true },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
         pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
       })
-      .from(container)
+      .from(doc.body)
       .save()
   } finally {
-    document.body.removeChild(container)
+    document.body.removeChild(iframe)
   }
 }
