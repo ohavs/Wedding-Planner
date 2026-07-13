@@ -7,7 +7,6 @@ import {
   type ReactNode,
 } from 'react'
 import {
-  addDoc,
   arrayRemove,
   arrayUnion,
   collection,
@@ -16,6 +15,7 @@ import {
   onSnapshot,
   query,
   serverTimestamp,
+  setDoc,
   updateDoc,
   where,
   writeBatch,
@@ -23,6 +23,7 @@ import {
 import { db } from '@/firebase/config'
 import { useAuth } from './AuthContext'
 import { DEFAULT_TASKS } from '@/lib/constants'
+import { reportWriteError } from '@/lib/writeError'
 import type { MemberRole, Wedding, WeddingFormData } from '@/lib/types'
 
 const ACTIVE_KEY = 'wp:activeWedding'
@@ -126,9 +127,13 @@ export function WeddingProvider({ children }: { children: ReactNode }) {
 
   const setActiveWedding = (id: string) => setActiveId(id)
 
+  // כל פעולות הכתיבה לא-חוסמות (optimistic) - לא ממתינות ל-ack מהשרת,
+  // כך שהממשק פועל גם אופליין. Firestore מסנכרן אוטומטית כשחוזר החיבור.
   const createWedding = async (data: WeddingFormData): Promise<string> => {
     if (!user) throw new Error('not signed in')
-    const ref = await addDoc(collection(db, 'weddings'), {
+    // מזהה נוצר מקומית ומיד זמין (גם אופליין)
+    const ref = doc(collection(db, 'weddings'))
+    setDoc(ref, {
       ...data,
       ownerId: user.uid,
       members: { [user.uid]: 'owner' },
@@ -137,7 +142,7 @@ export function WeddingProvider({ children }: { children: ReactNode }) {
       pendingInvites: [],
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    })
+    }).catch(reportWriteError)
     // זריעת משימות ברירת מחדל
     const batch = writeBatch(db)
     DEFAULT_TASKS.forEach((t, i) => {
@@ -152,80 +157,80 @@ export function WeddingProvider({ children }: { children: ReactNode }) {
         order: i,
       })
     })
-    await batch.commit()
+    batch.commit().catch(reportWriteError)
     setActiveId(ref.id)
     return ref.id
   }
 
   const updateWedding = async (data: Partial<WeddingFormData>) => {
     if (!wedding) return
-    await updateDoc(doc(db, 'weddings', wedding.id), {
+    updateDoc(doc(db, 'weddings', wedding.id), {
       ...data,
       updatedAt: serverTimestamp(),
-    })
+    }).catch(reportWriteError)
   }
 
   const inviteMember = async (email: string) => {
     if (!wedding) return
     const clean = email.trim().toLowerCase()
     if (!clean) return
-    await updateDoc(doc(db, 'weddings', wedding.id), {
+    updateDoc(doc(db, 'weddings', wedding.id), {
       pendingInvites: arrayUnion(clean),
-    })
+    }).catch(reportWriteError)
   }
 
   const cancelInvite = async (email: string) => {
     if (!wedding) return
-    await updateDoc(doc(db, 'weddings', wedding.id), {
+    updateDoc(doc(db, 'weddings', wedding.id), {
       pendingInvites: arrayRemove(email.toLowerCase()),
-    })
+    }).catch(reportWriteError)
   }
 
   const acceptInvite = async (wId: string) => {
     if (!user?.email) return
     const email = user.email.toLowerCase()
-    await updateDoc(doc(db, 'weddings', wId), {
+    updateDoc(doc(db, 'weddings', wId), {
       pendingInvites: arrayRemove(email),
       memberIds: arrayUnion(user.uid),
       memberEmails: arrayUnion(email),
       [`members.${user.uid}`]: 'editor' as MemberRole,
-    })
+    }).catch(reportWriteError)
     setActiveId(wId)
   }
 
   const declineInvite = async (wId: string) => {
     if (!user?.email) return
-    await updateDoc(doc(db, 'weddings', wId), {
+    updateDoc(doc(db, 'weddings', wId), {
       pendingInvites: arrayRemove(user.email.toLowerCase()),
-    })
+    }).catch(reportWriteError)
   }
 
   const removeMember = async (uid: string, email: string) => {
     if (!wedding) return
     const members = { ...wedding.members }
     delete members[uid]
-    await updateDoc(doc(db, 'weddings', wedding.id), {
+    updateDoc(doc(db, 'weddings', wedding.id), {
       members,
       memberIds: arrayRemove(uid),
       memberEmails: arrayRemove(email.toLowerCase()),
-    })
+    }).catch(reportWriteError)
   }
 
   const leaveWedding = async () => {
     if (!wedding || !user) return
     const members = { ...wedding.members }
     delete members[user.uid]
-    await updateDoc(doc(db, 'weddings', wedding.id), {
+    updateDoc(doc(db, 'weddings', wedding.id), {
       members,
       memberIds: arrayRemove(user.uid),
       memberEmails: arrayRemove(user.email?.toLowerCase() ?? ''),
-    })
+    }).catch(reportWriteError)
     setActiveId(null)
   }
 
   const deleteWedding = async () => {
     if (!wedding) return
-    await deleteDoc(doc(db, 'weddings', wedding.id))
+    deleteDoc(doc(db, 'weddings', wedding.id)).catch(reportWriteError)
     setActiveId(null)
   }
 

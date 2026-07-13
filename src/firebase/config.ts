@@ -1,6 +1,12 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app'
 import { getAuth, GoogleAuthProvider } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
+import {
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  type Firestore,
+} from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
 
 /**
@@ -43,9 +49,22 @@ try {
   console.warn('Firebase initialization skipped:', e)
 }
 
+// אתחול Firestore עם מטמון מקומי (IndexedDB) - נתונים זמינים אופליין,
+// כתיבות נשמרות בתור ומסונכרנות אוטומטית כשחוזר החיבור. ללא איבוד מידע.
+function createDb(a: FirebaseApp): Firestore {
+  try {
+    return initializeFirestore(a, {
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+    })
+  } catch (e) {
+    console.warn('Firestore persistence unavailable, falling back to memory cache', e)
+    return getFirestore(a)
+  }
+}
+
 export const firebaseApp = app
 export const auth = app ? getAuth(app) : (null as never)
-export const db = app ? getFirestore(app) : (null as never)
+export const db = app ? createDb(app) : (null as never)
 export const storage = app ? getStorage(app) : (null as never)
 
 export const googleProvider = new GoogleAuthProvider()

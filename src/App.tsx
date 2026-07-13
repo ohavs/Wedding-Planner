@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import { WeddingProvider, useWedding } from './context/WeddingContext'
 import { AppShell } from './components/layout/AppShell'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { OfflineBanner } from './components/OfflineBanner'
 import { FullScreenLoader } from './components/ui/Spinner'
 import { lazyWithRetry } from './lib/lazyWithRetry'
 
@@ -70,6 +71,7 @@ export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
+        <OfflineBanner />
         <Gate />
         <Toaster
           position="top-center"

@@ -50,22 +50,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (u) {
         setFirebaseUser(u)
         setUser(toAppUser(u))
-        // שמירת/עדכון פרופיל המשתמש
-        try {
-          await setDoc(
-            doc(db, 'users', u.uid),
-            {
-              uid: u.uid,
-              displayName: u.displayName,
-              email: u.email?.toLowerCase() ?? null,
-              photoURL: u.photoURL,
-              lastSeen: serverTimestamp(),
-            },
-            { merge: true },
-          )
-        } catch (e) {
-          console.warn('failed to save user profile', e)
-        }
+        // שמירת/עדכון פרופיל המשתמש - ללא await כדי לא לחסום את הטעינה
+        // (אופליין, הכתיבה נשמרת בתור ותסונכרן מאוחר יותר)
+        setDoc(
+          doc(db, 'users', u.uid),
+          {
+            uid: u.uid,
+            displayName: u.displayName,
+            email: u.email?.toLowerCase() ?? null,
+            photoURL: u.photoURL,
+            lastSeen: serverTimestamp(),
+          },
+          { merge: true },
+        ).catch((e) => console.warn('failed to save user profile', e))
       } else {
         setFirebaseUser(null)
         setUser(null)

@@ -13,6 +13,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '@/firebase/config'
 import { useWedding } from '@/context/WeddingContext'
+import { reportWriteError } from '@/lib/writeError'
 
 interface WithId {
   id: string
@@ -57,20 +58,28 @@ export function useWeddingCollection<T extends WithId>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weddingId, name, constraintKey])
 
+  // כתיבות לא-חוסמות (optimistic): לא ממתינים ל-ack מהשרת, כדי שהממשק
+  // לא ייתקע אופליין. Firestore מעדכן את המטמון המקומי מיד (onSnapshot),
+  // ומסנכרן לשרת אוטומטית כשחוזר החיבור.
   const api = useMemo(
     () => ({
-      async add(data: Omit<T, 'id' | 'createdAt'>) {
-        if (!weddingId) return
-        const ref = collection(db, 'weddings', weddingId, name)
-        await addDoc(ref, { ...data, createdAt: serverTimestamp() })
+      add(data: Omit<T, 'id' | 'createdAt'>): Promise<void> {
+        if (!weddingId) return Promise.resolve()
+        addDoc(collection(db, 'weddings', weddingId, name), {
+          ...data,
+          createdAt: serverTimestamp(),
+        }).catch(reportWriteError)
+        return Promise.resolve()
       },
-      async update(id: string, data: Partial<Omit<T, 'id'>>) {
-        if (!weddingId) return
-        await updateDoc(doc(db, 'weddings', weddingId, name, id), data as object)
+      update(id: string, data: Partial<Omit<T, 'id'>>): Promise<void> {
+        if (!weddingId) return Promise.resolve()
+        updateDoc(doc(db, 'weddings', weddingId, name, id), data as object).catch(reportWriteError)
+        return Promise.resolve()
       },
-      async remove(id: string) {
-        if (!weddingId) return
-        await deleteDoc(doc(db, 'weddings', weddingId, name, id))
+      remove(id: string): Promise<void> {
+        if (!weddingId) return Promise.resolve()
+        deleteDoc(doc(db, 'weddings', weddingId, name, id)).catch(reportWriteError)
+        return Promise.resolve()
       },
     }),
     [weddingId, name],

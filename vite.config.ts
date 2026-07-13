@@ -64,7 +64,10 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // הגשת מעטפת האפליקציה (index.html) לכל ניווט - כך האפליקציה עולה גם אופליין
+        navigateFallback: 'index.html',
         navigateFallbackDenylist: [/^\/__/],
+        cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
             urlPattern: ({ url }) => url.origin === 'https://fonts.googleapis.com',
