@@ -195,21 +195,29 @@ function VenueSheet({
     JSON.stringify({ name, capacity, fields, images, notes }) !== baseline.current
 
   const onFiles = async (files: FileList | null) => {
-    if (!files || !weddingId) return
+    if (!files) return
+    if (!weddingId) {
+      toast.error('אין חתונה פעילה')
+      return
+    }
     setUploading(true)
     try {
       for (const file of Array.from(files)) {
         if (!file.type.startsWith('image/')) continue
         const blob = await compressImage(file, 1400, 0.8)
-        const path = `weddings/${weddingId}/venues/${folder.current}/${Date.now()}_${genId().slice(0, 6)}.jpg`
+        const compressed = blob !== file
+        const contentType = compressed ? 'image/jpeg' : file.type || 'image/jpeg'
+        const ext = compressed ? 'jpg' : (file.name.split('.').pop() || 'jpg').toLowerCase()
+        const path = `weddings/${weddingId}/venues/${folder.current}/${Date.now()}_${genId().slice(0, 6)}.${ext}`
         const sref = storageRef(storage, path)
-        await uploadBytes(sref, blob, { contentType: 'image/jpeg' })
+        await uploadBytes(sref, blob, { contentType })
         const url = await getDownloadURL(sref)
         setImages((prev) => [...prev, { url, path }])
       }
     } catch (e) {
-      console.error(e)
-      toast.error('העלאת התמונה נכשלה')
+      const code = (e as { code?: string })?.code || (e as Error)?.message || 'שגיאה'
+      console.error('venue image upload failed:', code, e)
+      toast.error('העלאה נכשלה: ' + code)
     } finally {
       setUploading(false)
       if (inputRef.current) inputRef.current.value = ''
