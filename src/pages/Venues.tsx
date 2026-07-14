@@ -266,7 +266,10 @@ function VenueSheet({
       const init = {
         name: editing.name ?? '',
         capacity: editing.capacity ? String(editing.capacity) : '',
-        fields: editing.fields ?? [],
+        // מקום חדש מתחיל עם שדה קישור ריק כדי שיהיה בולט וקל למלא
+        fields:
+          editing.fields ??
+          (editing.id ? [] : [{ type: 'link' as const, label: '', value: '' }]),
         images: editing.images ?? [],
         notes: editing.notes ?? '',
       }
@@ -335,7 +338,14 @@ function VenueSheet({
     }
     setSaving(true)
     const cleanFields = fields
-      .map((f) => ({ ...f, label: f.label.trim(), value: f.value.trim() }))
+      .map((f) => {
+        let value = f.value.trim()
+        // נרמול כתובת קישור - הוספת https:// אם חסר, כדי שהקישור ייפתח כראוי
+        if (f.type === 'link' && value && !/^https?:\/\//i.test(value)) {
+          value = 'https://' + value
+        }
+        return { ...f, label: f.label.trim(), value }
+      })
       .filter((f) => f.label || f.value)
     await onSave(
       {
