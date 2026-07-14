@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import {
@@ -22,7 +23,7 @@ import { Field } from '@/components/ui/Field'
 import { DeleteButton } from '@/components/ui/DeleteButton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Spinner } from '@/components/ui/Spinner'
-import { staggerContainer, slideItem } from '@/lib/motion'
+import { staggerContainer, slideItem, overlayVariants } from '@/lib/motion'
 
 type Editing = Partial<Venue> | null
 
@@ -37,6 +38,7 @@ function genId() {
 export default function Venues() {
   const { items, add, update, remove } = useWeddingCollection<Venue>('venues')
   const [editing, setEditing] = useState<Editing>(null)
+  const [viewing, setViewing] = useState<Venue | null>(null)
 
   return (
     <div>
@@ -59,7 +61,12 @@ export default function Venues() {
           >
             <AnimatePresence initial={false}>
               {items.map((v) => (
-                <VenueCard key={v.id} venue={v} onOpen={() => setEditing(v)} />
+                <VenueCard
+                  key={v.id}
+                  venue={v}
+                  onOpen={() => setEditing(v)}
+                  onViewImages={() => setViewing(v)}
+                />
               ))}
             </AnimatePresence>
           </motion.div>
@@ -87,34 +94,51 @@ export default function Venues() {
           setEditing(null)
         }}
       />
+
+      <ImageLightbox venue={viewing} onClose={() => setViewing(null)} />
     </div>
   )
 }
 
-function VenueCard({ venue, onOpen }: { venue: Venue; onOpen: () => void }) {
+function VenueCard({
+  venue,
+  onOpen,
+  onViewImages,
+}: {
+  venue: Venue
+  onOpen: () => void
+  onViewImages: () => void
+}) {
   const cover = venue.images?.[0]
-  const links = (venue.fields ?? []).filter((f) => f.type === 'link' && f.value)
+  const fields = venue.fields ?? []
+  const links = fields.filter((f) => f.type === 'link' && f.value)
+  const texts = fields.filter((f) => f.type === 'text' && (f.label || f.value))
+
   return (
     <motion.div
       variants={slideItem}
       exit="exit"
       layout
-      onClick={onOpen}
-      className="cursor-pointer overflow-hidden rounded-3xl bg-white shadow-card"
+      className="overflow-hidden rounded-3xl bg-white shadow-card"
     >
+      {/* תמונה - לחיצה פותחת צפייה בכל התמונות */}
       {cover ? (
-        <div className="relative aspect-[16/9] bg-cream-200">
+        <button onClick={onViewImages} className="relative block aspect-[16/9] w-full bg-cream-200">
           <img src={cover.url} alt={venue.name} loading="lazy" className="h-full w-full object-cover" />
           {venue.images.length > 1 && (
             <span className="absolute bottom-2 end-2 rounded-full bg-black/50 px-2 py-0.5 text-xs font-semibold text-white">
               📷 {venue.images.length}
             </span>
           )}
-        </div>
+        </button>
       ) : (
-        <div className="flex aspect-[16/9] items-center justify-center bg-blush-100 text-5xl">🏛️</div>
+        <button onClick={onOpen} className="flex aspect-[16/9] w-full items-center justify-center bg-blush-100 text-5xl">
+          🏛️
+        </button>
       )}
-      <div className="p-4">
+
+      {/* פרטים - לחיצה פותחת עריכה */}
+      <div onClick={onOpen} className="cursor-pointer p-4">
         <div className="flex items-center justify-between gap-2">
           <h3 className="truncate text-lg font-bold text-ink">{venue.name}</h3>
           {venue.capacity > 0 && (
@@ -124,6 +148,20 @@ function VenueCard({ venue, onOpen }: { venue: Venue; onOpen: () => void }) {
             </span>
           )}
         </div>
+
+        {/* בלוקי טקסט מותאמים */}
+        {texts.length > 0 && (
+          <div className="mt-2.5 space-y-1.5">
+            {texts.map((f, i) => (
+              <div key={i} className="flex justify-between gap-3 text-sm">
+                <span className="shrink-0 text-ink-soft">{f.label || 'פרט'}</span>
+                <span className="truncate text-end font-medium text-ink">{f.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* קישורים */}
         {links.length > 0 && (
           <div className="mt-2.5 flex flex-wrap gap-2">
             {links.map((l, i) => (
@@ -141,8 +179,59 @@ function VenueCard({ venue, onOpen }: { venue: Venue; onOpen: () => void }) {
             ))}
           </div>
         )}
+
+        {/* הערות */}
+        {venue.notes && (
+          <p className="mt-2.5 border-t border-cream-200 pt-2.5 text-sm leading-relaxed text-ink-soft">
+            {venue.notes}
+          </p>
+        )}
       </div>
     </motion.div>
+  )
+}
+
+function ImageLightbox({ venue, onClose }: { venue: Venue | null; onClose: () => void }) {
+  return createPortal(
+    <AnimatePresence>
+      {venue && venue.images.length > 0 && (
+        <motion.div
+          variants={overlayVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          onClick={onClose}
+          className="fixed inset-0 z-[60] flex flex-col bg-black/95 backdrop-blur-sm"
+        >
+          <div className="flex items-center justify-between p-4 pt-safe">
+            <button
+              onClick={onClose}
+              className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15 text-white"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <span className="truncate px-3 font-semibold text-white">{venue.name}</span>
+            <span className="w-11" />
+          </div>
+          <div
+            className="hide-scrollbar flex flex-1 snap-x snap-mandatory overflow-x-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {venue.images.map((img) => (
+              <div key={img.path} className="flex min-w-full snap-center items-center justify-center p-4">
+                <img src={img.url} alt="" className="max-h-full max-w-full rounded-3xl object-contain" />
+              </div>
+            ))}
+          </div>
+          {venue.images.length > 1 && (
+            <p className="pb-[calc(1rem+var(--safe-bottom))] text-center text-sm text-white/70">
+              החליקו לתמונות נוספות ({venue.images.length})
+            </p>
+          )}
+        </motion.div>
+      )}
+    </AnimatePresence>,
+    document.body,
   )
 }
 
