@@ -23,6 +23,7 @@ import { Field } from '@/components/ui/Field'
 import { DeleteButton } from '@/components/ui/DeleteButton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Spinner } from '@/components/ui/Spinner'
+import { normalizeUrl } from '@/lib/utils'
 import { staggerContainer, slideItem, overlayVariants } from '@/lib/motion'
 
 type Editing = Partial<Venue> | null
@@ -167,7 +168,7 @@ function VenueCard({
             {links.map((l, i) => (
               <a
                 key={i}
-                href={l.value}
+                href={normalizeUrl(l.value)}
                 target="_blank"
                 rel="noreferrer"
                 onClick={(e) => e.stopPropagation()}

@@ -85,6 +85,14 @@ export function initials(name?: string | null): string {
   return parts[0].charAt(0) + parts[parts.length - 1].charAt(0)
 }
 
+/** נרמול כתובת קישור - הוספת https:// אם חסר, כדי שהקישור ייפתח באתר האמיתי */
+export function normalizeUrl(url: string): string {
+  const u = (url || '').trim()
+  if (!u) return u
+  if (/^(https?:\/\/|mailto:|tel:)/i.test(u)) return u
+  return 'https://' + u
+}
+
 /** ברכת שעה */
 export function greeting(): string {
   const h = new Date().getHours()
