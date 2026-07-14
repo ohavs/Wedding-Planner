@@ -7,6 +7,7 @@ import { Trash2, Upload, FileText, X, ImagePlus, ExternalLink } from 'lucide-rea
 import { storage } from '@/firebase/config'
 import { useWedding } from '@/context/WeddingContext'
 import { useWeddingCollection } from '@/hooks/useWeddingCollection'
+import { compressImage } from '@/lib/imageCompress'
 import type { InspirationCategory, InspirationItem } from '@/lib/types'
 import { INSPIRATION_CATEGORIES } from '@/lib/constants'
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -249,10 +250,20 @@ function UploadSheet({
     }
     setUploading(true)
     try {
-      const safeName = file.name.replace(/[^\w.\-]/g, '_')
-      const path = `weddings/${weddingId}/inspiration/${Date.now()}_${safeName}`
+      const isImage = file.type.startsWith('image/')
+      let blob: Blob = file
+      let contentType = file.type || 'application/octet-stream'
+      let ext = (file.name.split('.').pop() || 'bin').toLowerCase()
+      if (isImage) {
+        blob = await compressImage(file, 1600, 0.82)
+        const compressed = blob !== file
+        contentType = compressed ? 'image/jpeg' : file.type || 'image/jpeg'
+        ext = compressed ? 'jpg' : ext
+      }
+      const base = (file.name.replace(/\.[^.]+$/, '').replace(/[^\w-]/g, '_') || 'file').slice(0, 40)
+      const path = `weddings/${weddingId}/inspiration/${Date.now()}_${base}.${ext}`
       const sRef = storageRef(storage, path)
-      await uploadBytes(sRef, file)
+      await uploadBytes(sRef, blob, { contentType })
       const url = await getDownloadURL(sRef)
       await onUploaded({
         title: title.trim() || file.name,
@@ -260,11 +271,12 @@ function UploadSheet({
         imageUrl: url,
         storagePath: path,
         notes: '',
-        isDocument: !file.type.startsWith('image/'),
+        isDocument: !isImage,
       })
     } catch (e) {
-      console.error(e)
-      toast.error('ההעלאה נכשלה, נסו שוב')
+      const code = (e as { code?: string })?.code || (e as Error)?.message || 'שגיאה'
+      console.error('inspiration upload failed:', code, e)
+      toast.error('העלאה נכשלה: ' + code)
     } finally {
       setUploading(false)
     }

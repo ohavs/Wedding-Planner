@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 import { Search, Users, Download, FileText, ChevronDown, Plus, X } from 'lucide-react'
 import { useWedding } from '@/context/WeddingContext'
 import { useWeddingCollection } from '@/hooks/useWeddingCollection'
-import type { Guest, GuestKind, GuestSide } from '@/lib/types'
+import type { FamilyMember, Guest, GuestAge, GuestKind, GuestSide } from '@/lib/types'
 import { GUEST_GROUPS } from '@/lib/constants'
 import { exportGuestsWord, exportGuestsPdf } from '@/lib/exportGuests'
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -20,12 +20,23 @@ import { Select, type SelectOption } from '@/components/ui/Select'
 import { Stepper } from '@/components/ui/Stepper'
 import { DeleteButton } from '@/components/ui/DeleteButton'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { cn } from '@/lib/utils'
+import { cn, normalizeMembers } from '@/lib/utils'
 import { staggerContainer, slideItem } from '@/lib/motion'
 
 type Editing = Partial<Guest> | null
 
+const KIDS = '__kids__'
 const groupOptions = GUEST_GROUPS.map((g) => ({ value: g, label: g }))
+const ageOptions: SelectOption[] = [
+  { value: 'adult', label: 'מבוגר', emoji: '🧑' },
+  { value: 'child', label: 'ילד', emoji: '🧒' },
+]
+
+/** מספר הילדים ברשומה - למשפחה לפי סימון בני המשפחה, ליחיד לפי גיל */
+function childrenOf(g: Guest): number {
+  if (g.kind === 'family') return normalizeMembers(g.members).filter((m) => m.child).length
+  return g.ageGroup === 'child' ? g.count || 1 : 0
+}
 
 export default function Guests() {
   const { wedding } = useWedding()
@@ -55,24 +66,31 @@ export default function Guests() {
       p1: people((g) => g.side === 'partner1'),
       p2: people((g) => g.side === 'partner2'),
       shared: people((g) => g.side === 'shared'),
+      children: items.reduce((s, g) => s + childrenOf(g), 0),
     }
   }, [items])
 
-  // פילטרים לפי קירבה - רק קבוצות שיש בהן מוזמנים
+  // פילטרים לפי קירבה + פילטר ילדים
   const segments = useMemo(() => {
     const base = [{ value: 'all', label: 'הכל', count: items.length }]
+    const kidsCount = items.filter((g) => childrenOf(g) > 0).length
+    const kids = kidsCount > 0 ? [{ value: KIDS, label: 'ילדים 🧒', count: kidsCount }] : []
     const groups = GUEST_GROUPS.map((grp) => ({
       value: grp,
       label: grp,
       count: items.filter((g) => g.group === grp).length,
     })).filter((s) => s.count > 0)
-    return [...base, ...groups]
+    return [...base, ...kids, ...groups]
   }, [items])
 
   const filtered = useMemo(
     () =>
       items
-        .filter((g) => (filter === 'all' ? true : g.group === filter))
+        .filter((g) => {
+          if (filter === 'all') return true
+          if (filter === KIDS) return childrenOf(g) > 0
+          return g.group === filter
+        })
         .filter((g) => (search ? g.name.includes(search) : true))
         .sort((a, b) => a.name.localeCompare(b.name, 'he')),
     [items, filter, search],
@@ -113,6 +131,7 @@ export default function Guests() {
             <SideChip emoji="🤵" name={wedding?.partner1 || 'ראשון'} value={stats.p1} />
             <SideChip emoji="👰" name={wedding?.partner2 || 'שני'} value={stats.p2} />
             {stats.shared > 0 && <SideChip emoji="💞" name="משותף" value={stats.shared} />}
+            {stats.children > 0 && <SideChip emoji="🧒" name="ילדים" value={stats.children} />}
           </div>
         )}
 
@@ -153,6 +172,7 @@ export default function Guests() {
               {filtered.map((g) => {
                 const isFamily = g.kind === 'family'
                 const isOpen = expanded.has(g.id)
+                const kids = childrenOf(g)
                 return (
                   <motion.div
                     key={g.id}
@@ -174,9 +194,20 @@ export default function Guests() {
                         {isFamily ? <Users className="h-5 w-5" /> : g.name.charAt(0)}
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate font-bold text-ink">{g.name}</span>
+                        <span className="block truncate font-bold text-ink">
+                          {g.name}
+                          {isFamily && kids > 0 && (
+                            <span className="text-sm font-semibold text-coral-500"> ({kids} ילדים)</span>
+                          )}
+                        </span>
                         <span className="block truncate text-xs text-ink-soft">
-                          {[isFamily ? 'משפחה' : g.group, sideLabel(g.side)].filter(Boolean).join(' · ')}
+                          {[
+                            isFamily ? 'משפחה' : g.group,
+                            sideLabel(g.side),
+                            !isFamily && g.ageGroup === 'child' ? '🧒 ילד' : '',
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
                         </span>
                       </span>
                       <span className="flex shrink-0 items-center gap-1 rounded-full bg-cream-100 px-3 py-1.5 text-sm font-bold text-teal-600">
@@ -205,12 +236,17 @@ export default function Guests() {
                           >
                             <div className="px-4 pb-3.5">
                               <div className="space-y-1.5 border-t border-cream-200 pt-3">
-                                {(g.members ?? []).map((m, i) => (
+                                {normalizeMembers(g.members).map((m, i) => (
                                   <div key={i} className="flex items-center gap-2 text-sm text-ink">
                                     <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-cream-100 text-xs font-bold text-ink-faint">
                                       {i + 1}
                                     </span>
-                                    {m}
+                                    <span className="flex-1">{m.name}</span>
+                                    {m.child && (
+                                      <span className="rounded-full bg-sun-100 px-2 py-0.5 text-[11px] font-bold text-sun-600">
+                                        🧒 ילד
+                                      </span>
+                                    )}
                                   </div>
                                 ))}
                               </div>
@@ -390,7 +426,8 @@ function GuestSheet({
   const [side, setSide] = useState<GuestSide>('shared')
   const [group, setGroup] = useState('משפחה')
   const [count, setCount] = useState(1)
-  const [members, setMembers] = useState<string[]>([])
+  const [age, setAge] = useState<GuestAge>('adult')
+  const [members, setMembers] = useState<FamilyMember[]>([])
   const [saving, setSaving] = useState(false)
   const baseline = useRef('')
 
@@ -402,24 +439,30 @@ function GuestSheet({
         side: editing.side ?? 'shared',
         group: editing.group ?? 'משפחה',
         count: editing.count ?? 1,
-        members: editing.members ?? [],
+        age: editing.ageGroup ?? 'adult',
+        members: normalizeMembers(editing.members),
       }
       setKind(init.kind)
       setName(init.name)
       setSide(init.side)
       setGroup(init.group)
       setCount(init.count)
+      setAge(init.age)
       setMembers(init.members)
       baseline.current = JSON.stringify(init)
     }
   }, [editing])
 
-  const cleanedMembers = members.map((m) => m.trim()).filter(Boolean)
-  const dirty = JSON.stringify({ kind, name, side, group, count, members }) !== baseline.current
+  const cleanedMembers = members
+    .map((m) => ({ name: m.name.trim(), child: m.child ?? false }))
+    .filter((m) => m.name)
+  const childCount = cleanedMembers.filter((m) => m.child).length
+  const dirty =
+    JSON.stringify({ kind, name, side, group, count, age, members }) !== baseline.current
 
   const selectFamily = () => {
     setKind('family')
-    if (members.length === 0) setMembers([''])
+    if (members.length === 0) setMembers([{ name: '' }])
   }
 
   const submit = async () => {
@@ -434,8 +477,15 @@ function GuestSheet({
     setSaving(true)
     const base: Partial<Guest> =
       kind === 'family'
-        ? { kind: 'family', name: name.trim(), members: cleanedMembers, side, group, count: cleanedMembers.length }
-        : { kind: 'single', name: name.trim(), members: [], side, group, count }
+        ? {
+            kind: 'family',
+            name: name.trim(),
+            members: cleanedMembers,
+            side,
+            group,
+            count: cleanedMembers.length,
+          }
+        : { kind: 'single', name: name.trim(), members: [], side, group, count, ageGroup: age }
 
     if (editing?.id) {
       await onSave(base, editing.id)
@@ -472,26 +522,58 @@ function GuestSheet({
         </div>
 
         {kind === 'single' ? (
-          <Field label="כמות אנשים">
-            <Stepper value={count} onChange={setCount} min={1} max={30} />
-          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="כמות אנשים">
+              <Stepper value={count} onChange={setCount} min={1} max={30} />
+            </Field>
+            <Field label="גיל" hint="לא חובה — למנות ילדים">
+              <Select
+                value={age}
+                onChange={(v) => setAge(v as GuestAge)}
+                options={ageOptions}
+                title="מבוגר או ילד"
+              />
+            </Field>
+          </div>
         ) : (
-          <Field label="שמות בני המשפחה" hint={`סה״כ ${cleanedMembers.length} אנשים`}>
+          <Field
+            label="שמות בני המשפחה"
+            hint={`סה״כ ${cleanedMembers.length} אנשים${childCount > 0 ? ` · ${childCount} ילדים` : ''} · הקישו 🧑/🧒 לסימון ילד`}
+          >
             <div className="space-y-2">
               {members.map((m, i) => (
                 <div key={i} className="flex gap-2">
                   <Input
-                    value={m}
+                    value={m.name}
                     onChange={(e) =>
-                      setMembers((prev) => prev.map((x, idx) => (idx === i ? e.target.value : x)))
+                      setMembers((prev) =>
+                        prev.map((x, idx) => (idx === i ? { ...x, name: e.target.value } : x)),
+                      )
                     }
                     placeholder={`שם ${i + 1}`}
+                    className="flex-1"
                   />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setMembers((prev) =>
+                        prev.map((x, idx) => (idx === i ? { ...x, child: !x.child } : x)),
+                      )
+                    }
+                    className={cn(
+                      'flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl transition-colors',
+                      m.child ? 'bg-sun-100' : 'bg-cream-100',
+                    )}
+                    aria-label={m.child ? 'ילד' : 'מבוגר'}
+                    title={m.child ? 'ילד' : 'מבוגר'}
+                  >
+                    {m.child ? '🧒' : '🧑'}
+                  </button>
                   {members.length > 1 && (
                     <button
                       type="button"
                       onClick={() => setMembers((prev) => prev.filter((_, idx) => idx !== i))}
-                      className="flex h-14 w-12 shrink-0 items-center justify-center rounded-2xl bg-coral-50 text-coral-500"
+                      className="flex h-14 w-11 shrink-0 items-center justify-center rounded-2xl bg-coral-50 text-coral-500"
                       aria-label="הסרה"
                     >
                       <X className="h-5 w-5" />
@@ -501,7 +583,7 @@ function GuestSheet({
               ))}
               <button
                 type="button"
-                onClick={() => setMembers((prev) => [...prev, ''])}
+                onClick={() => setMembers((prev) => [...prev, { name: '' }])}
                 className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-cream-200 py-3 text-sm font-bold text-teal-600"
               >
                 <Plus className="h-5 w-5" /> הוספת שם

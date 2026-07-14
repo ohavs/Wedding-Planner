@@ -1,5 +1,11 @@
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
+import type { FamilyMember } from './types'
+
+/** ממיר בני משפחה לפורמט אחיד (תומך בפורמט הישן של מחרוזות) */
+export function normalizeMembers(members?: Array<string | FamilyMember>): FamilyMember[] {
+  return (members ?? []).map((m) => (typeof m === 'string' ? { name: m } : m))
+}
 
 /** מיזוג קלאסים של Tailwind */
 export function cn(...inputs: ClassValue[]) {

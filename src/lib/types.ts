@@ -56,14 +56,23 @@ export type WeddingFormData = Omit<
 export type RsvpStatus = 'pending' | 'yes' | 'no' | 'maybe'
 export type GuestSide = 'partner1' | 'partner2' | 'shared'
 export type GuestKind = 'single' | 'family'
+export type GuestAge = 'adult' | 'child'
+
+/** בן משפחה - שם + האם ילד (למנות ילדים) */
+export interface FamilyMember {
+  name: string
+  child?: boolean
+}
 
 export interface Guest {
   id: string
   name: string
   /** סוג: מוזמן יחיד או משפחה */
   kind?: GuestKind
-  /** שמות בני המשפחה (כאשר kind === 'family') */
-  members?: string[]
+  /** גיל (למוזמן יחיד) - מבוגר/ילד, לצורך מנות ילדים */
+  ageGroup?: GuestAge
+  /** בני המשפחה (כאשר kind === 'family'). תומך גם בפורמט ישן של מחרוזות */
+  members?: Array<string | FamilyMember>
   /** צד: של מי האורח */
   side: GuestSide
   /** קבוצה: משפחה, חברים, עבודה... */
