@@ -18,6 +18,7 @@ const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'))
 const Guests = lazyWithRetry(() => import('./pages/Guests'))
 const Budget = lazyWithRetry(() => import('./pages/Budget'))
 const Vendors = lazyWithRetry(() => import('./pages/Vendors'))
+const Venues = lazyWithRetry(() => import('./pages/Venues'))
 const Tasks = lazyWithRetry(() => import('./pages/Tasks'))
 const Gifts = lazyWithRetry(() => import('./pages/Gifts'))
 const DaySchedule = lazyWithRetry(() => import('./pages/DaySchedule'))
@@ -51,6 +52,7 @@ function Gate() {
               <Route path="guests" element={<Guests />} />
               <Route path="budget" element={<Budget />} />
               <Route path="vendors" element={<Vendors />} />
+              <Route path="venues" element={<Venues />} />
               <Route path="tasks" element={<Tasks />} />
               <Route path="gifts" element={<Gifts />} />
               <Route path="schedule" element={<DaySchedule />} />

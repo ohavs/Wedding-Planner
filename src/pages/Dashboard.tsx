@@ -44,12 +44,7 @@ export default function Dashboard() {
   const { items: gifts } = useWeddingCollection<GiftT>('gifts', noOrder)
 
   const stats = useMemo(() => {
-    const invited = guests.reduce((s, g) => s + (g.count || 1), 0)
-    const confirmed = guests
-      .filter((g) => g.rsvp === 'yes')
-      .reduce((s, g) => s + (g.count || 1), 0)
-    const responded = guests.filter((g) => g.rsvp !== 'pending').length
-    const rsvpPct = pct(responded, guests.length)
+    const people = guests.reduce((s, g) => s + (g.count || 1), 0)
 
     const spent =
       vendors.reduce((s, v) => s + (v.paid || 0), 0) +
@@ -66,9 +61,8 @@ export default function Dashboard() {
     const giftsTotal = gifts.reduce((s, g) => s + (g.amount || 0), 0)
 
     return {
-      invited,
-      confirmed,
-      rsvpPct,
+      people,
+      entries: guests.length,
       spent,
       budgetTotal,
       budgetPct,
@@ -88,14 +82,14 @@ export default function Dashboard() {
     {
       to: '/guests',
       title: 'מוזמנים',
-      ring: stats.rsvpPct,
-      sub: `${stats.confirmed} אישרו · ${stats.invited} הוזמנו`,
+      stat: String(stats.people),
+      sub: `${stats.entries} רשומות · ${stats.people} אנשים`,
       icon: Users,
       tone: 'from-teal-400 to-teal-600',
     },
     {
       to: '/budget',
-      title: 'תקציב',
+      title: 'הוצאות',
       ring: stats.budgetPct,
       sub: `${formatCurrency(stats.spent)} מתוך ${formatCurrency(stats.budgetTotal)}`,
       icon: Wallet,
@@ -117,7 +111,7 @@ export default function Dashboard() {
       icon: Briefcase,
       tone: 'from-sky-300 to-teal-400',
     },
-  ]
+  ] as const
 
   const quickLinks = [
     { to: '/gifts', label: 'מתנות', icon: Gift, value: formatCurrency(stats.giftsTotal) },
@@ -227,9 +221,15 @@ export default function Dashboard() {
                 <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/20">
                   <Icon className="h-5 w-5" />
                 </div>
-                <ProgressRing value={m.ring} size={52} stroke={6}>
-                  <span className="text-xs font-bold">{m.ring}%</span>
-                </ProgressRing>
+                {'ring' in m ? (
+                  <ProgressRing value={m.ring} size={52} stroke={6}>
+                    <span className="text-xs font-bold">{m.ring}%</span>
+                  </ProgressRing>
+                ) : (
+                  <div className="flex h-[52px] min-w-[52px] items-center justify-center rounded-2xl bg-white/15 px-2.5">
+                    <span className="text-2xl font-extrabold leading-none">{m.stat}</span>
+                  </div>
+                )}
               </div>
               <p className="relative mt-3 text-base font-bold">{m.title}</p>
               <p className="relative mt-0.5 text-xs text-white/85">{m.sub}</p>

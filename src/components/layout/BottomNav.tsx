@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 const items = [
   { to: '/', label: 'בית', icon: Home, end: true },
   { to: '/guests', label: 'מוזמנים', icon: Users, end: false },
-  { to: '/budget', label: 'תקציב', icon: Wallet, end: false },
+  { to: '/budget', label: 'הוצאות', icon: Wallet, end: false },
   { to: '/tasks', label: 'משימות', icon: ListChecks, end: false },
   { to: '/more', label: 'עוד', icon: LayoutGrid, end: false },
 ]

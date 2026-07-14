@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Briefcase,
+  Building2,
   Gift,
   Clock,
   Sparkles,
@@ -20,6 +21,7 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 
 const links = [
+  { to: '/venues', label: 'אולמות ומקומות', icon: Building2, tone: 'bg-blush-100 text-coral-500' },
   { to: '/vendors', label: 'ספקים', icon: Briefcase, tone: 'bg-teal-50 text-teal-600' },
   { to: '/gifts', label: 'מתנות וכספים', icon: Gift, tone: 'bg-coral-50 text-coral-500' },
   { to: '/schedule', label: 'לו״ז יום האירוע', icon: Clock, tone: 'bg-sun-50 text-sun-600' },

@@ -103,6 +103,9 @@ export interface BudgetItem {
   actual: number
   /** שולם */
   paid: number
+  /** תאריך ההוצאה / תשלום */
+  date?: string
+  notes?: string
   createdAt?: Timestamp
 }
 
@@ -140,6 +143,30 @@ export interface ScheduleEvent {
   /** אחראי */
   responsible: string
   location: string
+  notes: string
+  createdAt?: Timestamp
+}
+
+/** בלוק מותאם אישית באולם - קישור או טקסט */
+export interface VenueField {
+  type: 'link' | 'text'
+  label: string
+  value: string
+}
+
+export interface VenueImage {
+  url: string
+  path: string
+}
+
+export interface Venue {
+  id: string
+  name: string
+  /** קיבולת - כמות אנשים מקסימלית */
+  capacity: number
+  /** בלוקים דינמיים: קישורים / שדות מותאמים */
+  fields: VenueField[]
+  images: VenueImage[]
   notes: string
   createdAt?: Timestamp
 }
