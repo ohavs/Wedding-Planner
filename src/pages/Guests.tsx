@@ -283,18 +283,20 @@ export default function Guests() {
                           {isFamily && maybe > 0 && <Pill tone="coral">❓ {maybe} בספק</Pill>}
                         </span>
                       </span>
-                      <span className="flex shrink-0 items-center gap-1 rounded-full bg-cream-100 px-3 py-1.5 text-sm font-bold text-teal-600">
+                      <span className="flex min-w-[3.25rem] shrink-0 items-center justify-center gap-1 rounded-full bg-cream-100 px-3 py-1.5 text-sm font-bold text-teal-600">
                         {g.count || 1}
                         <Users className="h-4 w-4" />
                       </span>
-                      {isFamily && (
-                        <ChevronDown
-                          className={cn(
-                            'h-5 w-5 shrink-0 text-ink-faint transition-transform',
-                            isOpen && 'rotate-180',
-                          )}
-                        />
-                      )}
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center">
+                        {isFamily && (
+                          <ChevronDown
+                            className={cn(
+                              'h-5 w-5 text-ink-faint transition-transform',
+                              isOpen && 'rotate-180',
+                            )}
+                          />
+                        )}
+                      </span>
                     </button>
 
                     {isFamily && (
