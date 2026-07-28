@@ -45,6 +45,33 @@ function tentativeOf(g: Guest): number {
   return g.tentative ? g.count || 1 : 0
 }
 
+const sideEmoji = (s: GuestSide) => (s === 'partner1' ? '🤵' : s === 'partner2' ? '👰' : '💞')
+
+function Pill({
+  children,
+  tone = 'muted',
+}: {
+  children: React.ReactNode
+  tone?: 'muted' | 'side' | 'sun' | 'coral'
+}) {
+  const tones = {
+    muted: 'bg-cream-100 text-ink-soft',
+    side: 'bg-teal-50 text-teal-700',
+    sun: 'bg-sun-100 text-sun-600',
+    coral: 'bg-coral-100 text-coral-600',
+  }
+  return (
+    <span
+      className={cn(
+        'inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold',
+        tones[tone],
+      )}
+    >
+      {children}
+    </span>
+  )
+}
+
 export default function Guests() {
   const { wedding } = useWedding()
   const { items, add, update, remove } = useWeddingCollection<Guest>('guests')
@@ -78,21 +105,27 @@ export default function Guests() {
     }
   }, [items])
 
-  // פילטרים לפי קירבה + ילדים + הגעה בספק
+  // צ'יפים לחיצים: צד / ילדים / בספק (מתפקדים כפילטרים)
+  const filterChips = useMemo(() => {
+    const chips: { value: string; emoji: string; label: string; count: number }[] = [
+      { value: 'side:partner1', emoji: '🤵', label: wedding?.partner1 || 'ראשון', count: stats.p1 },
+      { value: 'side:partner2', emoji: '👰', label: wedding?.partner2 || 'שני', count: stats.p2 },
+    ]
+    if (stats.shared > 0) chips.push({ value: 'side:shared', emoji: '💞', label: 'משותף', count: stats.shared })
+    if (stats.children > 0) chips.push({ value: KIDS, emoji: '🧒', label: 'ילדים', count: stats.children })
+    if (stats.tentative > 0) chips.push({ value: MAYBE, emoji: '❓', label: 'בספק', count: stats.tentative })
+    return chips
+  }, [wedding?.partner1, wedding?.partner2, stats])
+
+  // פילטר קירבה
   const segments = useMemo(() => {
     const base = [{ value: 'all', label: 'הכל', count: items.length }]
-    const kidsCount = items.filter((g) => childrenOf(g) > 0).length
-    const maybeCount = items.filter((g) => tentativeOf(g) > 0).length
-    const extra = [
-      ...(kidsCount > 0 ? [{ value: KIDS, label: 'ילדים 🧒', count: kidsCount }] : []),
-      ...(maybeCount > 0 ? [{ value: MAYBE, label: 'בספק ❓', count: maybeCount }] : []),
-    ]
     const groups = GUEST_GROUPS.map((grp) => ({
       value: grp,
       label: grp,
       count: items.filter((g) => g.group === grp).length,
     })).filter((s) => s.count > 0)
-    return [...base, ...extra, ...groups]
+    return [...base, ...groups]
   }, [items])
 
   const filtered = useMemo(
@@ -102,6 +135,7 @@ export default function Guests() {
           if (filter === 'all') return true
           if (filter === KIDS) return childrenOf(g) > 0
           if (filter === MAYBE) return tentativeOf(g) > 0
+          if (filter.startsWith('side:')) return g.side === filter.slice(5)
           return g.group === filter
         })
         .filter((g) => (search ? g.name.includes(search) : true))
@@ -140,12 +174,31 @@ export default function Guests() {
         </motion.div>
 
         {stats.entries > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2">
-            <SideChip emoji="🤵" name={wedding?.partner1 || 'ראשון'} value={stats.p1} />
-            <SideChip emoji="👰" name={wedding?.partner2 || 'שני'} value={stats.p2} />
-            {stats.shared > 0 && <SideChip emoji="💞" name="משותף" value={stats.shared} />}
-            {stats.children > 0 && <SideChip emoji="🧒" name="ילדים" value={stats.children} />}
-            {stats.tentative > 0 && <SideChip emoji="❓" name="בספק" value={stats.tentative} />}
+          <div className="hide-scrollbar -mx-5 mt-3 flex gap-2 overflow-x-auto px-5 pb-1">
+            {filterChips.map((c) => {
+              const active = filter === c.value
+              return (
+                <button
+                  key={c.value}
+                  onClick={() => setFilter(active ? 'all' : c.value)}
+                  className={cn(
+                    'flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors',
+                    active ? 'bg-teal-500 text-white shadow-card' : 'bg-white text-ink shadow-soft',
+                  )}
+                >
+                  <span>{c.emoji}</span>
+                  <bdi className="max-w-[7rem] truncate">{c.label}</bdi>
+                  <span
+                    className={cn(
+                      'rounded-full px-1.5 text-[11px] font-bold',
+                      active ? 'bg-white/25 text-white' : 'bg-cream-100 text-teal-600',
+                    )}
+                  >
+                    {c.count}
+                  </span>
+                </button>
+              )
+            })}
           </div>
         )}
 
@@ -219,16 +272,15 @@ export default function Guests() {
                             <span className="text-sm font-semibold text-coral-500"> ({kids} ילדים)</span>
                           )}
                         </span>
-                        <span className="block truncate text-xs text-ink-soft">
-                          {[
-                            isFamily ? 'משפחה' : g.group,
-                            sideLabel(g.side),
-                            !isFamily && g.ageGroup === 'child' ? '🧒 ילד' : '',
-                            !isFamily && g.tentative ? '❓ בספק' : '',
-                            isFamily && maybe > 0 ? `❓ ${maybe} בספק` : '',
-                          ]
-                            .filter(Boolean)
-                            .join(' · ')}
+                        <span className="mt-1 flex flex-wrap items-center gap-1.5">
+                          <Pill>{isFamily ? 'משפחה' : g.group}</Pill>
+                          <Pill tone="side">
+                            <span>{sideEmoji(g.side)}</span>
+                            <bdi className="max-w-[7rem] truncate">{sideLabel(g.side)}</bdi>
+                          </Pill>
+                          {!isFamily && g.ageGroup === 'child' && <Pill tone="sun">🧒 ילד</Pill>}
+                          {!isFamily && g.tentative && <Pill tone="coral">❓ בספק</Pill>}
+                          {isFamily && maybe > 0 && <Pill tone="coral">❓ {maybe} בספק</Pill>}
                         </span>
                       </span>
                       <span className="flex shrink-0 items-center gap-1 rounded-full bg-cream-100 px-3 py-1.5 text-sm font-bold text-teal-600">
@@ -345,17 +397,6 @@ export default function Guests() {
         }}
       />
     </div>
-  )
-}
-
-function SideChip({ emoji, name, value }: { emoji: string; name: string; value: number }) {
-  return (
-    <span className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-ink shadow-soft">
-      <span>{emoji}</span>
-      <span className="max-w-[7rem] truncate">{name}</span>
-      <span className="text-ink-faint">·</span>
-      <span className="text-teal-600">{value}</span>
-    </span>
   )
 }
 
