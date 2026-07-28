@@ -58,10 +58,11 @@ export type GuestSide = 'partner1' | 'partner2' | 'shared'
 export type GuestKind = 'single' | 'family'
 export type GuestAge = 'adult' | 'child'
 
-/** בן משפחה - שם + האם ילד (למנות ילדים) */
+/** בן משפחה - שם + האם ילד (למנות ילדים) + האם הגעה בספק */
 export interface FamilyMember {
   name: string
   child?: boolean
+  tentative?: boolean
 }
 
 export interface Guest {
@@ -71,6 +72,8 @@ export interface Guest {
   kind?: GuestKind
   /** גיל (למוזמן יחיד) - מבוגר/ילד, לצורך מנות ילדים */
   ageGroup?: GuestAge
+  /** הגעה בספק (למוזמן יחיד) */
+  tentative?: boolean
   /** בני המשפחה (כאשר kind === 'family'). תומך גם בפורמט ישן של מחרוזות */
   members?: Array<string | FamilyMember>
   /** צד: של מי האורח */

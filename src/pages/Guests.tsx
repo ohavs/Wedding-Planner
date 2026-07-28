@@ -26,6 +26,7 @@ import { staggerContainer, slideItem } from '@/lib/motion'
 type Editing = Partial<Guest> | null
 
 const KIDS = '__kids__'
+const MAYBE = '__maybe__'
 const groupOptions = GUEST_GROUPS.map((g) => ({ value: g, label: g }))
 const ageOptions: SelectOption[] = [
   { value: 'adult', label: 'מבוגר', emoji: '🧑' },
@@ -36,6 +37,12 @@ const ageOptions: SelectOption[] = [
 function childrenOf(g: Guest): number {
   if (g.kind === 'family') return normalizeMembers(g.members).filter((m) => m.child).length
   return g.ageGroup === 'child' ? g.count || 1 : 0
+}
+
+/** מספר האנשים ברשומה שהגעתם בספק */
+function tentativeOf(g: Guest): number {
+  if (g.kind === 'family') return normalizeMembers(g.members).filter((m) => m.tentative).length
+  return g.tentative ? g.count || 1 : 0
 }
 
 export default function Guests() {
@@ -67,20 +74,25 @@ export default function Guests() {
       p2: people((g) => g.side === 'partner2'),
       shared: people((g) => g.side === 'shared'),
       children: items.reduce((s, g) => s + childrenOf(g), 0),
+      tentative: items.reduce((s, g) => s + tentativeOf(g), 0),
     }
   }, [items])
 
-  // פילטרים לפי קירבה + פילטר ילדים
+  // פילטרים לפי קירבה + ילדים + הגעה בספק
   const segments = useMemo(() => {
     const base = [{ value: 'all', label: 'הכל', count: items.length }]
     const kidsCount = items.filter((g) => childrenOf(g) > 0).length
-    const kids = kidsCount > 0 ? [{ value: KIDS, label: 'ילדים 🧒', count: kidsCount }] : []
+    const maybeCount = items.filter((g) => tentativeOf(g) > 0).length
+    const extra = [
+      ...(kidsCount > 0 ? [{ value: KIDS, label: 'ילדים 🧒', count: kidsCount }] : []),
+      ...(maybeCount > 0 ? [{ value: MAYBE, label: 'בספק ❓', count: maybeCount }] : []),
+    ]
     const groups = GUEST_GROUPS.map((grp) => ({
       value: grp,
       label: grp,
       count: items.filter((g) => g.group === grp).length,
     })).filter((s) => s.count > 0)
-    return [...base, ...kids, ...groups]
+    return [...base, ...extra, ...groups]
   }, [items])
 
   const filtered = useMemo(
@@ -89,6 +101,7 @@ export default function Guests() {
         .filter((g) => {
           if (filter === 'all') return true
           if (filter === KIDS) return childrenOf(g) > 0
+          if (filter === MAYBE) return tentativeOf(g) > 0
           return g.group === filter
         })
         .filter((g) => (search ? g.name.includes(search) : true))
@@ -132,6 +145,7 @@ export default function Guests() {
             <SideChip emoji="👰" name={wedding?.partner2 || 'שני'} value={stats.p2} />
             {stats.shared > 0 && <SideChip emoji="💞" name="משותף" value={stats.shared} />}
             {stats.children > 0 && <SideChip emoji="🧒" name="ילדים" value={stats.children} />}
+            {stats.tentative > 0 && <SideChip emoji="❓" name="בספק" value={stats.tentative} />}
           </div>
         )}
 
@@ -173,6 +187,7 @@ export default function Guests() {
                 const isFamily = g.kind === 'family'
                 const isOpen = expanded.has(g.id)
                 const kids = childrenOf(g)
+                const maybe = tentativeOf(g)
                 return (
                   <motion.div
                     key={g.id}
@@ -188,7 +203,11 @@ export default function Guests() {
                       <span
                         className={cn(
                           'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl font-bold',
-                          isFamily ? 'bg-blush-100 text-coral-500' : 'bg-cream-100 text-teal-600',
+                          !isFamily && g.tentative
+                            ? 'bg-coral-100 text-coral-600'
+                            : isFamily
+                              ? 'bg-blush-100 text-coral-500'
+                              : 'bg-cream-100 text-teal-600',
                         )}
                       >
                         {isFamily ? <Users className="h-5 w-5" /> : g.name.charAt(0)}
@@ -205,6 +224,8 @@ export default function Guests() {
                             isFamily ? 'משפחה' : g.group,
                             sideLabel(g.side),
                             !isFamily && g.ageGroup === 'child' ? '🧒 ילד' : '',
+                            !isFamily && g.tentative ? '❓ בספק' : '',
+                            isFamily && maybe > 0 ? `❓ ${maybe} בספק` : '',
                           ]
                             .filter(Boolean)
                             .join(' · ')}
@@ -237,11 +258,22 @@ export default function Guests() {
                             <div className="px-4 pb-3.5">
                               <div className="space-y-1.5 border-t border-cream-200 pt-3">
                                 {normalizeMembers(g.members).map((m, i) => (
-                                  <div key={i} className="flex items-center gap-2 text-sm text-ink">
+                                  <div
+                                    key={i}
+                                    className={cn(
+                                      'flex items-center gap-2 text-sm',
+                                      m.tentative ? 'font-semibold text-coral-500' : 'text-ink',
+                                    )}
+                                  >
                                     <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-cream-100 text-xs font-bold text-ink-faint">
                                       {i + 1}
                                     </span>
-                                    <span className="flex-1">{m.name}</span>
+                                    <span className="flex-1 truncate">{m.name}</span>
+                                    {m.tentative && (
+                                      <span className="rounded-full bg-coral-100 px-2 py-0.5 text-[11px] font-bold text-coral-600">
+                                        ❓ בספק
+                                      </span>
+                                    )}
                                     {m.child && (
                                       <span className="rounded-full bg-sun-100 px-2 py-0.5 text-[11px] font-bold text-sun-600">
                                         🧒 ילד
@@ -427,6 +459,7 @@ function GuestSheet({
   const [group, setGroup] = useState('משפחה')
   const [count, setCount] = useState(1)
   const [age, setAge] = useState<GuestAge>('adult')
+  const [tentative, setTentative] = useState(false)
   const [members, setMembers] = useState<FamilyMember[]>([])
   const [saving, setSaving] = useState(false)
   const baseline = useRef('')
@@ -440,6 +473,7 @@ function GuestSheet({
         group: editing.group ?? 'משפחה',
         count: editing.count ?? 1,
         age: editing.ageGroup ?? 'adult',
+        tentative: editing.tentative ?? false,
         members: normalizeMembers(editing.members),
       }
       setKind(init.kind)
@@ -448,17 +482,19 @@ function GuestSheet({
       setGroup(init.group)
       setCount(init.count)
       setAge(init.age)
+      setTentative(init.tentative)
       setMembers(init.members)
       baseline.current = JSON.stringify(init)
     }
   }, [editing])
 
   const cleanedMembers = members
-    .map((m) => ({ name: m.name.trim(), child: m.child ?? false }))
+    .map((m) => ({ name: m.name.trim(), child: m.child ?? false, tentative: m.tentative ?? false }))
     .filter((m) => m.name)
   const childCount = cleanedMembers.filter((m) => m.child).length
+  const maybeCount = cleanedMembers.filter((m) => m.tentative).length
   const dirty =
-    JSON.stringify({ kind, name, side, group, count, age, members }) !== baseline.current
+    JSON.stringify({ kind, name, side, group, count, age, tentative, members }) !== baseline.current
 
   const selectFamily = () => {
     setKind('family')
@@ -484,8 +520,9 @@ function GuestSheet({
             side,
             group,
             count: cleanedMembers.length,
+            tentative: false,
           }
-        : { kind: 'single', name: name.trim(), members: [], side, group, count, ageGroup: age }
+        : { kind: 'single', name: name.trim(), members: [], side, group, count, ageGroup: age, tentative }
 
     if (editing?.id) {
       await onSave(base, editing.id)
@@ -522,23 +559,36 @@ function GuestSheet({
         </div>
 
         {kind === 'single' ? (
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="כמות אנשים">
-              <Stepper value={count} onChange={setCount} min={1} max={30} />
-            </Field>
-            <Field label="גיל" hint="לא חובה — למנות ילדים">
-              <Select
-                value={age}
-                onChange={(v) => setAge(v as GuestAge)}
-                options={ageOptions}
-                title="מבוגר או ילד"
-              />
-            </Field>
-          </div>
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="כמות אנשים">
+                <Stepper value={count} onChange={setCount} min={1} max={30} />
+              </Field>
+              <Field label="גיל" hint="לא חובה">
+                <Select
+                  value={age}
+                  onChange={(v) => setAge(v as GuestAge)}
+                  options={ageOptions}
+                  title="מבוגר או ילד"
+                />
+              </Field>
+            </div>
+            <button
+              type="button"
+              onClick={() => setTentative((t) => !t)}
+              className={cn(
+                'flex w-full items-center justify-center gap-2 rounded-2xl py-3 text-sm font-bold transition-colors',
+                tentative ? 'bg-coral-100 text-coral-600' : 'bg-cream-100 text-ink-soft',
+              )}
+            >
+              <span className="text-base font-black">?</span>
+              {tentative ? 'מסומן: הגעה בספק' : 'סימון הגעה בספק (אולי)'}
+            </button>
+          </>
         ) : (
           <Field
             label="שמות בני המשפחה"
-            hint={`סה״כ ${cleanedMembers.length} אנשים${childCount > 0 ? ` · ${childCount} ילדים` : ''} · הקישו 🧑/🧒 לסימון ילד`}
+            hint={`${cleanedMembers.length} אנשים${childCount > 0 ? ` · ${childCount} ילדים` : ''}${maybeCount > 0 ? ` · ${maybeCount} בספק` : ''} · 🧑/🧒 ילד · ? הגעה בספק`}
           >
             <div className="space-y-2">
               {members.map((m, i) => (
@@ -551,7 +601,7 @@ function GuestSheet({
                       )
                     }
                     placeholder={`שם ${i + 1}`}
-                    className="flex-1"
+                    className={cn('flex-1', m.tentative && 'border-coral-300 bg-coral-50')}
                   />
                   <button
                     type="button"
@@ -561,7 +611,7 @@ function GuestSheet({
                       )
                     }
                     className={cn(
-                      'flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl transition-colors',
+                      'flex h-14 w-11 shrink-0 items-center justify-center rounded-2xl text-lg transition-colors',
                       m.child ? 'bg-sun-100' : 'bg-cream-100',
                     )}
                     aria-label={m.child ? 'ילד' : 'מבוגר'}
@@ -569,11 +619,27 @@ function GuestSheet({
                   >
                     {m.child ? '🧒' : '🧑'}
                   </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setMembers((prev) =>
+                        prev.map((x, idx) => (idx === i ? { ...x, tentative: !x.tentative } : x)),
+                      )
+                    }
+                    className={cn(
+                      'flex h-14 w-11 shrink-0 items-center justify-center rounded-2xl text-lg font-black transition-colors',
+                      m.tentative ? 'bg-coral-100 text-coral-600' : 'bg-cream-100 text-ink-faint',
+                    )}
+                    aria-label="הגעה בספק"
+                    title="הגעה בספק"
+                  >
+                    ?
+                  </button>
                   {members.length > 1 && (
                     <button
                       type="button"
                       onClick={() => setMembers((prev) => prev.filter((_, idx) => idx !== i))}
-                      className="flex h-14 w-11 shrink-0 items-center justify-center rounded-2xl bg-coral-50 text-coral-500"
+                      className="flex h-14 w-10 shrink-0 items-center justify-center rounded-2xl bg-coral-50 text-coral-500"
                       aria-label="הסרה"
                     >
                       <X className="h-5 w-5" />
